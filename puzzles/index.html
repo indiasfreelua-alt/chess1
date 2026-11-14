@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Puzzles — LocalChess</title>
+  <link rel="stylesheet" href="../assets/chess-app/board.css" />
+  <link rel="stylesheet" href="../assets/chess-app/puzzles.css" />
+</head>
+<body>
+
+  <!-- ═══ Left sidebar ═══ -->
+  <aside class="sidebar">
+    <a class="side-logo" href="../">♞ LocalChess</a>
+    <nav class="side-nav">
+      <a href="./" class="side-link"><span class="side-ico">♟</span> Play</a>
+      <a href="../puzzles/" class="side-link active"><span class="side-ico">🧩</span> Puzzles</a>
+      <a href="../analysis/" class="side-link"><span class="side-ico">📈</span> Analysis</a>
+    </nav>
+  </aside>
+
+  <!-- ═══ Puzzle trainer screen ═══ -->
+  <main class="screen active play-layout">
+
+    <section class="board-stage">
+      <div id="plate-top" class="nameplate"></div>
+      <div id="board-mount"></div>
+      <div class="nav-bar">
+        <button id="btn-hint" type="button">💡 Hint</button>
+        <button id="btn-retry" type="button">↺ Retry</button>
+        <button id="btn-prev" type="button">◀ Prev</button>
+        <button id="btn-next" type="button">Next ▶</button>
+      </div>
+      <div class="kb-hints">
+        <kbd>←</kbd><kbd>→</kbd> puzzle · <kbd>H</kbd> hint · <kbd>R</kbd> retry
+      </div>
+    </section>
+
+    <aside class="bot-panel">
+      <div class="panel-head"><span>🧩</span> Puzzle Trainer</div>
+
+      <div id="pz-status" class="game-status">Loading…</div>
+
+      <div class="panel-section pz-progress">
+        <div class="pz-progress-row">
+          <span class="panel-label">Progress</span>
+          <span id="pz-progress-count" class="pz-progress-count">0 / 0 solved</span>
+        </div>
+        <div class="progress-track">
+          <div id="pz-progress-fill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="pz-chip-row">
+          <span id="pz-theme" class="pz-chip">—</span>
+          <span id="pz-rating" class="pz-chip rating">—</span>
+          <span id="pz-counter" class="muted"></span>
+        </div>
+        <div id="pz-desc" class="muted"></div>
+        <div id="pz-message" class="pz-msg"></div>
+        <div id="pz-success" class="pz-success">
+          <div class="pz-check">✔</div>
+          <div id="pz-success-title" class="pz-s-title">Puzzle solved!</div>
+          <div id="pz-success-sub" class="pz-s-sub"></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="acc-grid">
+          <div class="acc-card">
+            <span class="acc-side">Solved</span>
+            <span id="pz-score" class="acc-value">0</span>
+          </div>
+          <div class="acc-card">
+            <span class="acc-side">Total</span>
+            <span id="pz-total" class="acc-value">0</span>
+          </div>
+        </div>
+        <div class="panel-actions">
+          <button id="btn-reset-score" type="button" class="btn-ghost">Reset score</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">Puzzle list</div>
+        <div id="pz-list" class="pz-list"></div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- chess.js CJS shim → window.Chess -->
+  <script>
+    window.exports = {};
+    window.module = { exports: window.exports };
+  </script>
+  <script src="../assets/vendor/chess.js"></script>
+  <script>
+    if (window.module.exports.Chess) window.Chess = window.module.exports.Chess;
+    delete window.module; delete window.exports;
+  </script>
+
+  <script src="../assets/chess-app/board-ui.js"></script>
+  <script src="../assets/chess-app/trainer.js"></script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const T = window.Trainer;
+    const $ = function (id) { return document.getElementById(id); };
+
+    // ── DOM handles ─────────────────────────────────────────────────────────
+    const statusEl = $('pz-status');
+    const messageEl = $('pz-message');
+    const plateEl = $('plate-top');
+    const listEl = $('pz-list');
+    const successEl = $('pz-success');
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    // ── Feedback helpers ────────────────────────────────────────────────────
+    function say(text, kind) {
+      messageEl.textContent = text || '';
+      messageEl.classList.remove('ok', 'err');
+      if (kind) messageEl.classList.add(kind);
+    }
+
+    function clearFeedback() {
+      say('');
+      successEl.classList.remove('visible');
+    }
+
+    // ── Auto-advance handling ───────────────────────────────────────────────
+    let advanceTimer = null;
+
+    function cancelAutoAdvance() {
+      if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
+    }
+
+    function nextUnsolvedIndex(fromIdx) {
+      const n = T.PUZZLES.length;
+      for (let i = 1; i <= n; i++) {
+        const idx = (fromIdx + i) % n;
+        if (T.getScore().solvedIds.indexOf(T.PUZZLES[idx].id) === -1) return idx;
+      }
+      return -1;
+    }
+
+    // ── Board ───────────────────────────────────────────────────────────────
+    const ui = new BoardUI('board-mount', {
+      orientation: 'w',
+      canPick: function (sq, piece) {
+        return piece.color === T.getGame().turn();
+      },
+      onUserMove: onUserMove,
+    });
+
+    function flashWrong(from, to) {
+      [from, to].forEach(function (sq) {
+        const cell = document.querySelector('div[data-sq="' + sq + '"]');
+        if (!cell) return;
+        cell.classList.remove('wrong-flash');
+        void cell.offsetWidth; // restart the animation if it is already applied
+        cell.classList.add('wrong-flash');
+        setTimeout(function () { cell.classList.remove('wrong-flash'); }, 520);
+      });
+    }
+
+    // ── Move flow ───────────────────────────────────────────────────────────
+    function onUserMove(from, to, promo) {
+      cancelAutoAdvance();
+      ui.setArrows([]);
+      const res = T.validateMove({ from: from, to: to, promotion: promo || 'q' });
+
+      if (!res.legal) {
+        say(res.message || 'Illegal move', 'err');
+        ui.refresh();
+        return;
+      }
+
+      if (res.correct) {
+        if (res.move) ui.setLastMove({ from: res.move.from, to: res.move.to });
+        ui.refresh();
+        if (res.opponentMove) {
+          const om = res.opponentMove;
+          setTimeout(function () {
+            ui.setLastMove({ from: om.from, to: om.to });
+          }, 420);
+        }
+        if (res.done && res.move) {
+          onSolved(res);
+        } else {
+          say(res.message || 'Good move — keep going!', 'ok');
+        }
+      } else {
+        // Wrong move: trainer already reverted it — flash the squares red.
+        ui.refresh();
+        flashWrong(from, to);
+        say(res.message || 'Incorrect — try again', 'err');
+      }
+
+      renderMeta();
+      renderProgress();
+      renderList();
+    }
+
+    function onSolved(res) {
+      const p = T.getCurrentPuzzle();
+      const score = T.getScore();
+      const allDone = score.solvedCount >= score.total;
+
+      $('pz-success-title').textContent = 'Puzzle solved!';
+      $('pz-success-sub').textContent = allDone
+        ? 'All ' + score.total + ' puzzles complete — outstanding!'
+        : '"' + p.title + '" done — next one coming up…';
+      successEl.classList.add('visible');
+      say(res.message || 'Puzzle solved!', 'ok');
+      statusEl.textContent = '✔ Solved — ' + p.title;
+
+      cancelAutoAdvance();
+      if (!allDone) {
+        advanceTimer = setTimeout(function () {
+          advanceTimer = null;
+          const curIdx = T.PUZZLES.indexOf(T.getCurrentPuzzle());
+          const nextIdx = nextUnsolvedIndex(curIdx);
+          if (nextIdx !== -1) {
+            T.loadPuzzle(nextIdx);
+            renderAll(true);
+          }
+        }, 1600);
+      }
+    }
+
+    // ── Rendering ───────────────────────────────────────────────────────────
+    function renderStatus() {
+      const p = T.getCurrentPuzzle();
+      const turn = (p.fen.split(' ')[1] === 'b') ? 'Black' : 'White';
+      statusEl.textContent = turn + ' to move — ' + p.title;
+    }
+
+    function renderPlate() {
+      const p = T.getCurrentPuzzle();
+      plateEl.innerHTML =
+        '<span class="plate-avatar">🧩</span><span>' + escapeHtml(p.title) +
+        ' <small>· ' + escapeHtml(p.theme) + ' · rating ' + p.rating + '</small></span>';
+    }
+
+    function renderMeta() {
+      const p = T.getCurrentPuzzle();
+      const idx = T.PUZZLES.indexOf(p);
+      $('pz-theme').textContent = p.theme;
+      $('pz-rating').textContent = '★ ' + p.rating;
+      $('pz-counter').textContent = 'Puzzle ' + (idx + 1) + ' / ' + T.PUZZLES.length;
+      $('pz-desc').textContent = p.description || '';
+    }
+
+    function renderProgress() {
+      const score = T.getScore();
+      $('pz-score').textContent = score.solvedCount;
+      $('pz-total').textContent = score.total;
+      $('pz-progress-count').textContent = score.solvedCount + ' / ' + score.total + ' solved';
+      const pct = score.total ? Math.round((100 * score.solvedCount) / score.total) : 0;
+      $('pz-progress-fill').style.width = pct + '%';
+    }
+
+    function renderList() {
+      listEl.innerHTML = '';
+      const solved = new Set(T.getScore().solvedIds);
+      const curIdx = T.PUZZLES.indexOf(T.getCurrentPuzzle());
+
+      T.PUZZLES.forEach(function (p, idx) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pz-item' +
+          (solved.has(p.id) ? ' solved' : '') +
+          (idx === curIdx ? ' active' : '');
+
+        const check = document.createElement('span');
+        check.className = 'pz-i-check';
+        check.textContent = solved.has(p.id) ? '✓' : '';
+
+        const num = document.createElement('span');
+        num.className = 'pz-i-num';
+        num.textContent = (idx + 1);
+
+        const name = document.createElement('span');
+        name.className = 'pz-i-name';
+        name.textContent = p.title;
+        name.title = p.description || p.title;
+
+        const theme = document.createElement('span');
+        theme.className = 'pz-i-theme';
+        theme.textContent = p.theme;
+
+        const rating = document.createElement('span');
+        rating.className = 'pz-i-rating';
+        rating.textContent = p.rating;
+
+        btn.appendChild(check);
+        btn.appendChild(num);
+        btn.appendChild(name);
+        btn.appendChild(theme);
+        btn.appendChild(rating);
+
+        btn.addEventListener('click', function () {
+          cancelAutoAdvance();
+          T.loadPuzzle(idx);
+          renderAll(true);
+        });
+
+        listEl.appendChild(btn);
+      });
+    }
+
+    function renderAll(fresh) {
+      cancelAutoAdvance();
+      ui.setGame(T.getGame());
+
+      const p = T.getCurrentPuzzle();
+      const turn = (p.fen.split(' ')[1] === 'b') ? 'b' : 'w';
+      ui.setOrientation(turn);
+
+      if (fresh) {
+        ui.setLastMove(null);
+        ui.setArrows([]);
+        clearFeedback();
+      }
+
+      ui.refresh();
+      renderStatus();
+      renderPlate();
+      renderMeta();
+      renderProgress();
+      renderList();
+    }
+
+    // ── Actions ─────────────────────────────────────────────────────────────
+    function showHint() {
+      cancelAutoAdvance();
+      successEl.classList.remove('visible');
+      const mv = T.getHintMove();
+      const san = T.getHint();
+      if (mv) {
+        ui.setArrows([{ from: mv.from, to: mv.to, color: 'green' }]);
+        say('Hint: try ' + (san || mv.san));
+      } else {
+        say('No hint available', 'err');
+      }
+    }
+
+    function retry() {
+      cancelAutoAdvance();
+      T.loadPuzzle(T.PUZZLES.indexOf(T.getCurrentPuzzle()));
+      renderAll(true);
+      say('Puzzle reset — try again.');
+    }
+
+    $('btn-hint').addEventListener('click', showHint);
+    $('btn-retry').addEventListener('click', retry);
+    $('btn-prev').addEventListener('click', function () {
+      cancelAutoAdvance();
+      T.prevPuzzle();
+      renderAll(true);
+    });
+    $('btn-next').addEventListener('click', function () {
+      cancelAutoAdvance();
+      T.nextPuzzle();
+      renderAll(true);
+    });
+    $('btn-reset-score').addEventListener('click', function () {
+      cancelAutoAdvance();
+      T.resetScore();
+      renderAll(true);
+      say('Score reset — fresh start!');
+    });
+
+    // ── Keyboard shortcuts ──────────────────────────────────────────────────
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      switch (e.key) {
+        case 'ArrowRight':
+          e.preventDefault();
+          cancelAutoAdvance();
+          T.nextPuzzle();
+          renderAll(true);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          cancelAutoAdvance();
+          T.prevPuzzle();
+          renderAll(true);
+          break;
+        case 'h':
+        case 'H':
+          showHint();
+          break;
+        case 'r':
+        case 'R':
+          retry();
+          break;
+      }
+    });
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    renderAll(true);
+  })();
+  </script>
+
+</body>
+</html>

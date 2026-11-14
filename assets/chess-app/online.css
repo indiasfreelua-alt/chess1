@@ -1,0 +1,80 @@
+/* online.css — Play Online page specifics (lobby, room code, states) */
+
+/* Lobby cards */
+#lobby-cards { display: flex; flex-direction: column; gap: 0.8rem; }
+.lobby-card {
+  background: #2d2c29;
+  border: 1px solid #3a3936;
+  border-radius: 10px;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.lobby-card h4 { font-size: 0.98rem; }
+.lobby-card p { color: #9f9b90; font-size: 0.82rem; line-height: 1.4; }
+
+#join-code {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  font-family: monospace;
+}
+
+/* Room panel */
+#room-panel { display: flex; flex-direction: column; gap: 0.5rem; }
+#room-panel.hidden { display: none; }
+.room-code-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9f9b90;
+  font-weight: 700;
+}
+.room-code-row { display: flex; align-items: center; gap: 0.6rem; }
+.room-code {
+  flex: 1;
+  background: #1a1917;
+  border: 1px dashed #5a584f;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-family: monospace;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-align: center;
+  color: #81b64c;
+  user-select: all;
+}
+.nav-btn-mini {
+  background: #3d3c37;
+  color: #e8e8e3;
+  border: 1px solid #4a4943;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.nav-btn-mini:hover { background: #4a4943; }
+
+.waiting-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #c9c7c0;
+  font-size: 0.88rem;
+}
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #4a4943;
+  border-top-color: #81b64c;
+  border-radius: 50%;
+  animation: cb-spin 0.8s linear infinite;
+}
+@keyframes cb-spin { to { transform: rotate(360deg); } }
+
+/* Connection state line under move list */
+#conn-state { color: #ffa459; font-style: italic; }

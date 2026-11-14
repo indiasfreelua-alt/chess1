@@ -1,0 +1,102 @@
+/* analysis.css — Game Review page specifics (original work for this harness).
+   Loads after board.css; only page-local layout/typography lives here.       */
+
+/* ═══ Two-column layout (mirrors the play page) ═══ */
+.play-layout { gap: 1.6rem; }
+
+/* The review panel scrolls internally so the sticky nav bar is always
+   reachable, even when accuracy cards + move list fill the screen.      */
+.analysis-panel.bot-panel {
+  width: 400px;
+  max-height: calc(100vh - 2.8rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ═══ Panel header summary + opening ═══ */
+.review-line {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #81b64c;
+  text-align: center;
+  min-height: 1.2em;
+}
+.review-line.hidden { display: none; }
+
+.opening-name {
+  font-size: 0.82rem;
+  color: #9f9b90;
+  text-align: center;
+  font-style: italic;
+}
+.opening-name.hidden { display: none; }
+
+/* ═══ Progress row: bar + "Analyzing… 34/61" text ═══ */
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.progress-row .progress-track { flex: 1; }
+.progress-text {
+  font-size: 0.74rem;
+  color: #9f9b90;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 9.5em;
+  text-align: right;
+}
+
+/* ═══ Engine depth selector ═══ */
+.depth-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.depth-row .panel-label { white-space: nowrap; }
+.depth-row select { flex: 1; padding: 0.35rem 0.55rem; font-size: 0.85rem; }
+
+/* ═══ Sticky prev/next bar at the bottom of the panel ═══ */
+.sticky-nav {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+  background: #262522;
+  border-top: 1px solid #3a3936;
+}
+.sticky-nav button {
+  flex: 1;
+  background: #3d3c37;
+  color: #e8e8e3;
+  border: 1px solid #4a4943;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sticky-nav button:hover { background: #4a4943; }
+.sticky-nav button:disabled { opacity: 0.45; cursor: default; }
+
+/* ═══ Move list fits the panel flow ═══ */
+.move-list.analysis {
+  max-height: 300px;
+  flex: 0 1 auto;
+}
+
+/* ═══ Eval graph bars react to hover/click ═══ */
+.eval-graph .eg-col { transition: filter 0.1s; }
+.eval-graph .eg-col:hover { filter: brightness(1.15); }
+
+/* ═══ Narrow screens: let the panel flow naturally ═══ */
+@media (max-width: 1100px) {
+  .analysis-panel.bot-panel {
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+  }
+  .sticky-nav { position: static; }
+}

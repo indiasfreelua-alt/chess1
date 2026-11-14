@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Play Bots — LocalChess</title>
+  <link rel="stylesheet" href="../assets/chess-app/board.css" />
+</head>
+<body>
+
+  <!-- ═══ Left sidebar ═══ -->
+  <aside class="sidebar">
+    <a class="side-logo" href="../">♞ LocalChess</a>
+    <nav class="side-nav">
+      <a href="./" class="side-link active"><span class="side-ico">♟</span> Play</a>
+      <a href="./online/" class="side-link"><span class="side-ico">👥</span> Online</a>
+      <a href="../puzzles/" class="side-link"><span class="side-ico">🧩</span> Puzzles</a>
+      <a href="../analysis/" class="side-link"><span class="side-ico">📈</span> Analysis</a>
+    </nav>
+  </aside>
+
+  <!-- ═══ Screen 1: bot selection ═══ -->
+  <main id="select-view" class="screen play-layout">
+    <section class="board-stage">
+      <div id="plate-bot" class="nameplate"></div>
+      <div id="board-mount"></div>
+      <div id="plate-you" class="nameplate"></div>
+    </section>
+
+    <aside class="bot-panel">
+      <div class="panel-head"><span class="panel-head-ico">🖥️</span> Play Bots</div>
+
+      <div id="selected-bot" class="selected-bot">
+        <span id="sb-avatar" class="sb-avatar">🤖</span>
+        <div class="sb-meta">
+          <span id="sb-name" class="sb-name">Pick a bot</span>
+          <span id="sb-rating" class="sb-rating"></span>
+        </div>
+      </div>
+      <div id="bot-quip" class="bot-quip hidden"></div>
+
+      <div id="bot-cats"></div>
+
+      <div class="panel-options">
+        <label class="panel-label" for="side-select">Play as</label>
+        <select id="side-select">
+          <option value="w">White</option>
+          <option value="b">Black</option>
+          <option value="random">Random</option>
+        </select>
+      </div>
+
+      <button id="btn-play" class="btn-cta">Play</button>
+    </aside>
+  </main>
+
+  <!-- ═══ Screen 2: game vs selected bot ═══ -->
+  <main id="game-view" class="screen play-layout">
+    <section class="board-stage">
+      <div id="plate-bot-g" class="nameplate"></div>
+      <div id="board-mount-g"></div>
+      <div id="plate-you-g" class="nameplate"></div>
+    </section>
+
+    <aside class="bot-panel">
+      <div id="status" class="game-status">Your move</div>
+      <div id="move-list" class="move-list"></div>
+      <span id="thinking" class="thinking">bot is thinking…</span>
+      <div class="panel-actions">
+        <button id="btn-new">New Bot</button>
+        <button id="btn-resign">Resign</button>
+        <button id="btn-flip">Flip</button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ═══ Intro modal (first visit) ═══ -->
+  <div id="intro-modal" class="modal-overlay">
+    <div class="modal-box intro">
+      <button id="btn-intro-x" class="modal-x" title="Close">✕</button>
+      <h3 class="intro-title">Play the bots</h3>
+      <p class="modal-sub">Challenge a bot to a chess game. Choose from beginner to master.</p>
+      <div class="intro-icon">🖥️</div>
+      <ul class="intro-list">
+        <li><b>◆</b> Bots with strengths and styles from rookie to superhuman</li>
+        <li><b>✦</b> Instant game review grades every move you play</li>
+        <li><b>♙</b> Practice at any time — with no pressure</li>
+      </ul>
+      <button id="btn-intro-start" class="btn-cta wide">Start</button>
+    </div>
+  </div>
+
+  <!-- ═══ Game over modal ═══ -->
+  <div id="result-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="result-text">You won!</h3>
+      <p id="result-sub" class="modal-sub"></p>
+      <div class="modal-actions">
+        <button id="btn-analyze">Analyze game</button>
+        <button id="btn-rematch">Rematch</button>
+        <button id="btn-result-close" class="btn-ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- chess.js CJS shim → window.Chess -->
+  <script>
+    window.exports = {};
+    window.module = { exports: window.exports };
+  </script>
+  <script src="../assets/vendor/chess.js"></script>
+  <script>
+    if (window.module.exports.Chess) window.Chess = window.module.exports.Chess;
+    delete window.module; delete window.exports;
+  </script>
+
+  <script src="../assets/chess-app/board-ui.js"></script>
+  <script src="../assets/chess-app/bots.js"></script>
+  <script src="../assets/chess-app/play.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Review — Local Chess</title>
+  <link rel="stylesheet" href="../assets/chess-app/board.css" />
+  <link rel="stylesheet" href="../assets/chess-app/analysis.css" />
+</head>
+<body>
+
+  <!-- ═══ Left sidebar ═══ -->
+  <aside class="sidebar">
+    <a class="side-logo" href="../">♞ LocalChess</a>
+    <nav class="side-nav">
+      <a href="./" class="side-link"><span class="side-ico">♟</span> Play</a>
+      <a href="../puzzles/" class="side-link"><span class="side-ico">🧩</span> Puzzles</a>
+      <a href="../analysis/" class="side-link active"><span class="side-ico">📈</span> Analysis</a>
+    </nav>
+  </aside>
+
+  <main class="screen active play-layout">
+
+    <!-- ═══ Board column ═══ -->
+    <section class="board-stage">
+      <div id="plate-top" class="nameplate">
+        <span id="plate-top-avatar" class="plate-avatar">♚</span>
+        <span id="plate-top-name">Black</span>
+        <small id="plate-top-acc"></small>
+      </div>
+      <div id="board-mount"></div>
+      <div id="plate-bottom" class="nameplate">
+        <span id="plate-bottom-avatar" class="plate-avatar">♔</span>
+        <span id="plate-bottom-name">White</span>
+        <small id="plate-bottom-acc"></small>
+      </div>
+      <div class="nav-bar">
+        <button id="btn-first" title="First (Home)">⏮</button>
+        <button id="btn-prev" title="Previous (←)">◀</button>
+        <button id="btn-next" title="Next (→)">▶</button>
+        <button id="btn-last" title="Last (End)">⏭</button>
+        <button id="btn-flip" title="Flip board (F)">⇅</button>
+      </div>
+    </section>
+
+    <!-- ═══ Review panel ═══ -->
+    <aside class="bot-panel wide analysis-panel">
+
+      <div class="panel-head"><span class="panel-head-ico">📈</span> Game Review</div>
+
+      <div id="review-line" class="review-line hidden"></div>
+      <div id="opening-name" class="opening-name hidden"></div>
+
+      <div class="panel-section">
+        <label class="panel-label" for="game-select">Saved game</label>
+        <select id="game-select"></select>
+        <label class="panel-label" for="pgn-input">Paste PGN or FEN</label>
+        <textarea id="pgn-input" rows="3" placeholder="1. e4 e5 2. Nf3 …"></textarea>
+        <div class="panel-actions">
+          <button id="btn-load-pgn">Load</button>
+          <button id="btn-analyze" disabled>Analyze</button>
+        </div>
+        <div id="load-status" class="load-status"></div>
+        <div class="progress-row">
+          <div class="progress-track"><div id="progress-bar" class="progress-fill"></div></div>
+          <span id="progress-text" class="progress-text"></span>
+        </div>
+        <div class="depth-row">
+          <label class="panel-label" for="depth-select">Engine depth</label>
+          <select id="depth-select">
+            <option value="100">Fast · 100 ms</option>
+            <option value="250" selected>Standard · 250 ms</option>
+            <option value="600">Deep · 600 ms</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="summary" class="panel-section hidden">
+        <div class="acc-grid">
+          <div class="acc-card">
+            <span class="acc-side">White</span>
+            <span id="acc-w" class="acc-value">—</span>
+            <div id="counts-w" class="cls-chips"></div>
+          </div>
+          <div class="acc-card">
+            <span class="acc-side">Black</span>
+            <span id="acc-b" class="acc-value">—</span>
+            <div id="counts-b" class="cls-chips"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="move-list" class="move-list analysis"></div>
+
+      <div class="panel-section">
+        <div id="eval-graph" class="eval-graph"></div>
+        <div class="graph-labels"><span>black</span><span>eval per move — click to jump</span><span>white</span></div>
+      </div>
+
+      <div class="sticky-nav">
+        <button id="btn-prev-sticky" title="Previous move (←)">◀ Prev move</button>
+        <button id="btn-next-sticky" title="Next move (→)">Next move ▶</button>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- chess.js CJS shim → window.Chess -->
+  <script>
+    window.exports = {};
+    window.module = { exports: window.exports };
+  </script>
+  <script src="../assets/vendor/chess.js"></script>
+  <script>
+    if (window.module.exports.Chess) window.Chess = window.module.exports.Chess;
+    delete window.module; delete window.exports;
+  </script>
+
+  <script src="../assets/chess-app/board-ui.js"></script>
+  <script src="../assets/chess-app/analysis.js"></script>
+
+</body>
+</html>

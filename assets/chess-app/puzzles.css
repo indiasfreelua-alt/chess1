@@ -1,0 +1,142 @@
+/* puzzles.css — Puzzle Trainer page styles (loaded after board.css)
+   Extends the shared dark palette; everything page-specific lives here. */
+
+/* ═══ Board stage extras ═══ */
+.kb-hints {
+  text-align: center;
+  color: #77746c;
+  font-size: 0.74rem;
+  padding-top: 0.1rem;
+}
+.kb-hints kbd {
+  display: inline-block;
+  background: #33322e;
+  border: 1px solid #4a4943;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 0.34rem;
+  margin: 0 0.1rem;
+  font-family: inherit;
+  font-size: 0.7rem;
+  color: #c9c7c0;
+  line-height: 1.5;
+}
+
+/* ═══ Current-puzzle meta chips ═══ */
+.pz-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.pz-chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 1px solid #55534d;
+  border-radius: 999px;
+  padding: 0.14rem 0.55rem;
+  color: #c9c7c0;
+  white-space: nowrap;
+}
+.pz-chip.rating {
+  border-color: #81b64c66;
+  color: #a5d477;
+}
+.pz-chip-row .muted { margin-left: auto; }
+
+/* ═══ Feedback message ═══ */
+.pz-msg {
+  font-size: 0.85rem;
+  color: #9f9b90;
+  min-height: 1.15em;
+}
+.pz-msg.ok { color: #a5d477; font-weight: 700; }
+.pz-msg.err { color: #fa412d; font-weight: 700; }
+
+/* ═══ Success panel ═══ */
+.pz-success {
+  display: none;
+  background: #2d3a24;
+  border: 1px solid #81b64c;
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  text-align: center;
+}
+.pz-success.visible { display: block; animation: pz-pop 0.25s ease-out; }
+.pz-success .pz-check { font-size: 1.45rem; color: #81b64c; line-height: 1.1; }
+.pz-success .pz-s-title { font-weight: 800; font-size: 0.95rem; color: #dcedc9; }
+.pz-success .pz-s-sub { font-size: 0.75rem; color: #9f9b90; margin-top: 0.15rem; }
+@keyframes pz-pop {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* ═══ Wrong-move flash on board squares ═══ */
+.cb-square.wrong-flash { animation: pz-flash-red 0.5s ease-out; }
+@keyframes pz-flash-red {
+  0%   { box-shadow: inset 0 0 0 100vmax rgba(250, 65, 45, 0.55); }
+  100% { box-shadow: inset 0 0 0 100vmax rgba(250, 65, 45, 0); }
+}
+
+/* ═══ Progress block ═══ */
+.pz-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.pz-progress-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c9c7c0;
+}
+
+/* ═══ Puzzle list ═══ */
+.pz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.pz-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: #2d2c29;
+  border: 1px solid #3a3936;
+  border-radius: 8px;
+  padding: 0.42rem 0.6rem;
+  cursor: pointer;
+  text-align: left;
+  color: #e8e8e3;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.12s, border-color 0.12s;
+}
+.pz-item:hover { background: #33322e; }
+.pz-item.active {
+  border-color: #81b64c;
+  box-shadow: 0 0 0 1px #81b64c55;
+  background: #33322e;
+}
+.pz-item.solved { border-color: #81b64c66; }
+.pz-item .pz-i-check { color: #81b64c; font-weight: 800; min-width: 1.1em; }
+.pz-item .pz-i-num { color: #77746c; min-width: 1.5ch; font-weight: 700; }
+.pz-item .pz-i-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pz-item .pz-i-theme {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #9f9b90;
+  border: 1px solid #44423d;
+  border-radius: 999px;
+  padding: 0.06rem 0.4rem;
+  white-space: nowrap;
+}
+.pz-item .pz-i-rating { color: #9f9b90; font-size: 0.68rem; font-weight: 700; }
+.pz-item.active .pz-i-rating { color: #a5d477; }

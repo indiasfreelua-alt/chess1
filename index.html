@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalChess — Play, Train, Review</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #21201d; color: #e8e8e3; min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 3rem 1rem;
+    }
+    .brand { font-size: 2rem; font-weight: 800; color: #81b64c; margin-bottom: .4rem; }
+    .tagline { color: #9f9b90; margin-bottom: 2.2rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; width: 100%; max-width: 860px; }
+    a.card {
+      display: block; background: #262522; border: 1px solid #3a3936; border-radius: 12px;
+      padding: 1.4rem; text-decoration: none; color: #e8e8e3;
+      transition: transform .12s, border-color .12s;
+    }
+    a.card:hover { transform: translateY(-3px); border-color: #81b64c; }
+    .card .ico { font-size: 2rem; }
+    .card h2 { font-size: 1.05rem; margin: .5rem 0 .3rem; }
+    .card p { color: #9f9b90; font-size: .86rem; line-height: 1.45; }
+    footer { margin-top: 2.5rem; color: #6e6b63; font-size: .78rem; }
+  </style>
+</head>
+<body>
+  <div class="brand">♞ LocalChess</div>
+  <div class="tagline">A self-contained chess playground — engine, trainer and review, all client-side.</div>
+  <div class="cards">
+    <a class="card" href="play/">
+      <div class="ico">♟</div>
+      <h2>Play vs Bots</h2>
+      <p>Ten bots from 250 to 2820 Elo, each with its own style. Powered by Stockfish running in your browser.</p>
+    </a>
+    <a class="card" href="puzzles/">
+      <div class="ico">🧩</div>
+      <h2>Puzzle Trainer</h2>
+      <p>Tactical puzzles with hints, instant feedback and progress tracking.</p>
+    </a>
+    <a class="card" href="analysis/">
+      <div class="ico">📈</div>
+      <h2>Game Review</h2>
+      <p>Paste a PGN and get every move graded with accuracy scores and an eval graph.</p>
+    </a>
+    <a class="card" href="play/online/">
+      <div class="ico">👥</div>
+      <h2>Play Online</h2>
+      <p>Invite a friend with a room code and play peer-to-peer over WebRTC.</p>
+    </a>
+  </div>
+  <footer>chess.js (MIT) · Stockfish (GPL-3.0) · app code: original</footer>
+</body>
+</html>
