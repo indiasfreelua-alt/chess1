@@ -7,8 +7,10 @@
  *   - Sequential Stockfish evaluation of every position, gated on engine
  *     readiness (readyok) before the first query is sent
  *   - Move classification: Brilliant / Great / Best / Book / Excellent /
- *     Good / Inaccuracy / Mistake / Blunder
- *   - Accuracy per side, eval graph, eval bar, best-move arrows
+ *     Good / Inaccuracy / Mistake / Blunder (Brilliant is deliberately rare:
+ *     engine-top + genuine non-forced sacrifice that still holds the eval)
+ *   - Accuracy per side, eval graph, eval bar, guide arrows (blue = played
+ *     move into the position, green = engine best from it)
  *   - Engine depth selector, live progress ("Analyzing… 12/34"),
  *     summary line with result + accuracies, opening detection
  *
@@ -391,6 +393,62 @@
     navigate(currentPly); // refresh arrows/eval/graph highlight
   }
 
+  // ══ Classification calibration ════════════════════════════════════════════
+  // cp loss (cpl) = bestVal − playedVal, both from the mover's point of view.
+  //   best       played move == engine top choice (SAN-normalized). Honest
+  //              signal — never capped.
+  //   great      cpl ≤ 10 (not the engine top) · excellent ≤ 25 · good ≤ 50 ·
+  //              inaccuracy ≤ 100 · mistake ≤ 250 · blunder > 250.
+  //   book       first 10 plies from the small opening set, but ONLY while
+  //              the move costs < 150 cp; a "book" move losing ≥ 150 cp is
+  //              reclassified by its cp loss.
+  //   escalation win%-drop > 20 pts forces at least "mistake", > 30 pts
+  //              forces "blunder" (worse wins) — catches shallow-eval noise
+  //              the cp bands alone would understate.
+  //   dead-equal when BOTH bestVal and playedVal sit within ±50 cp of zero
+  //              nothing real is lost, so classification is capped at
+  //              "inaccuracy" (a brilliant is exempt: an equalizing
+  //              sacrifice can be the whole point of the move).
+  //   brilliant  deliberately RARE — all four gates must pass:
+  //                (a) played move is the engine's top choice,
+  //                (b) genuine sacrifice: the opponent can actually WIN ≥ 2
+  //                    pawns of material through a capture chain, with the
+  //                    mover's recaptures counted (a defended capture or a
+  //                    simple trade is NOT a sacrifice),
+  //                (c) the eval still holds for the mover (playedVal ≥ −30),
+  //                (d) the sacrifice was not the only legal move.
+  //              A quiet opening must therefore produce ZERO brilliants.
+  const MATE_ZONE = 5000;        // |eval| beyond this = mate-decided outcome
+  const MATE_CLAMP = 9000;       // clamp for mixed mate/cp subtraction
+  const BRILLIANT_MIN_VAL = -30; // sacrifice must not lose the eval (mover POV)
+  const DEAD_EQUAL_BAND = 50;    // ±cp of zero = dead-equal position
+  const BOOK_MAX_CPL = 150;      // book move costing ≥ this is not "book"
+  const SAC_DEPTH = 4;           // plies of capture chain for the sac test
+  const PIECE_VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+  function clampEval(v) {
+    return Math.max(-MATE_CLAMP, Math.min(MATE_CLAMP, v));
+  }
+
+  // cp loss for the mover. Mate-encoded pseudo-cp (±(10000 − n·100)) is
+  // clamped so a subtraction across the mate boundary can't explode.
+  function moveCpl(bestVal, playedVal) {
+    if (bestVal === null || playedVal === null) return 0;
+    const bMate = Math.abs(bestVal) >= MATE_ZONE;
+    const pMate = Math.abs(playedVal) >= MATE_ZONE;
+    if (bMate && pMate) {
+      // Mate-decided on both sides of the move: same outcome costs nothing,
+      // a flipped outcome (winning → getting mated) is a hard blunder.
+      return Math.sign(bestVal) === Math.sign(playedVal) ? 0 : 2000;
+    }
+    return Math.max(0, clampEval(bestVal) - clampEval(playedVal));
+  }
+
+  // Escalate cls to target ('mistake'|'blunder'); blunder always wins.
+  function worseClass(cls, target) {
+    return cls === 'blunder' ? 'blunder' : target;
+  }
+
   function classifyAll() {
     perMove = [];
     for (let i = 0; i < moves.length; i++) {
@@ -406,19 +464,18 @@
       const playedVal = after && after.scoreWhite !== null && after.scoreWhite !== undefined
         ? (moverIsWhite ? -after.scoreWhite : after.scoreWhite) : null;
 
-      let cpl = 0;
-      if (bestVal !== null && playedVal !== null) cpl = Math.max(0, bestVal - playedVal);
+      const cpl = moveCpl(bestVal, playedVal);
 
       const san = moves[i];
-      let cls = null;
       const hasEval = bestVal !== null && playedVal !== null;
       const isBookMove = i < 10 && BOOK.has(san);
-      const playedBest = before && before.best &&
-        playedBestMatches(before.best, positions[i], san);
+      const playedBest = !!(before && before.best &&
+        playedBestMatches(before.best, positions[i], san));
 
+      let cls = null;
       if (playedBest) cls = 'best';
-      else if (isBookMove) cls = 'book';
       else if (!hasEval) cls = null; // engine data missing — no badge
+      else if (isBookMove && cpl < BOOK_MAX_CPL) cls = 'book';
       else if (cpl <= 10) cls = 'great';
       else if (cpl <= 25) cls = 'excellent';
       else if (cpl <= 50) cls = 'good';
@@ -426,8 +483,27 @@
       else if (cpl <= 250) cls = 'mistake';
       else cls = 'blunder';
 
-      // Brilliant: best move + material sacrifice that still holds
-      if (playedBest && isSacrifice(positions[i], san)) cls = 'brilliant';
+      // Brilliant: see calibration notes above — all four gates must pass.
+      if (playedBest && hasEval &&
+          playedVal >= BRILLIANT_MIN_VAL &&
+          isSacrifice(fenBefore, san)) {
+        cls = 'brilliant';
+      }
+
+      // Win%-drop escalation (in addition to the cp bands, take the worse).
+      if (hasEval) {
+        const wpDrop = winPercent(bestVal) - winPercent(playedVal);
+        if (wpDrop > 30) cls = worseClass(cls, 'blunder');
+        else if (wpDrop > 20) cls = worseClass(cls, 'mistake');
+      }
+
+      // Dead-equal cap: near-zero either way ⇒ nothing worse than inaccuracy.
+      if (hasEval && cls !== 'brilliant' &&
+          Math.abs(bestVal) <= DEAD_EQUAL_BAND &&
+          Math.abs(playedVal) <= DEAD_EQUAL_BAND &&
+          (cls === 'mistake' || cls === 'blunder')) {
+        cls = 'inaccuracy';
+      }
 
       // Accuracy from win% perspective (only meaningful with engine data)
       let acc = null;
@@ -449,31 +525,38 @@
     } catch (e) { return false; }
   }
 
+  // Net material (in pawn units) the side to move can win with a chain of
+  // captures, assuming the opponent recaptures — a miniature capture-only
+  // search. Captures are optional, so the result never drops below zero.
+  // Only invoked for engine-top matches, so the recursive cost is negligible.
+  function captureNet(chess, depth) {
+    if (depth <= 0) return 0;
+    let best = 0;
+    const caps = chess.moves({ verbose: true })
+      .filter(function (m) { return m.captured; })
+      .sort(function (a, b) { return PIECE_VAL[b.captured] - PIECE_VAL[a.captured]; });
+    for (let i = 0; i < caps.length; i++) {
+      const gain = PIECE_VAL[caps[i].captured];
+      if (gain <= best) continue; // even a clean win can't beat current best
+      chess.move(caps[i]);
+      const recapture = captureNet(chess, depth - 1);
+      chess.undo();
+      if (gain - recapture > best) best = gain - recapture;
+    }
+    return best;
+  }
+
+  // A genuine sacrifice: after playing `san`, the opponent has a capture
+  // chain that nets ≥ 2 pawns WITH the mover's recaptures counted (so a
+  // defended capture or an even trade is NOT a sacrifice), and the move was
+  // not the only legal option.
   function isSacrifice(fen, san) {
     try {
       const probe = new Chess(fen);
+      if (probe.moves().length <= 1) return false; // (d) forced move
       const mv = probe.move(san);
       if (!mv) return false;
-      const VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-      const moverIsWhite = mv.color === 'w';
-      function material(color) {
-        let m = 0;
-        probe.board().forEach(function (row) {
-          row.forEach(function (sq) {
-            if (sq && sq.color === color) m += VAL[sq.type];
-          });
-        });
-        return m;
-      }
-      // Let the opponent capture the most valuable hanging piece
-      const reply = probe.moves({ verbose: true })
-        .filter(function (r) { return r.captured; })
-        .sort(function (a, b) { return VAL[b.captured] - VAL[a.captured]; })[0];
-      if (!reply) return false;
-      const before = material(moverIsWhite ? 'w' : 'b') - material(moverIsWhite ? 'b' : 'w');
-      probe.move(reply);
-      const after = material(moverIsWhite ? 'w' : 'b') - material(moverIsWhite ? 'b' : 'w');
-      return (before - after) >= 2; // gave up >= 2 pawns of material
+      return captureNet(probe, SAC_DEPTH) >= 2;    // (b) opponent can win ≥ 2 pawns
     } catch (e) { return false; }
   }
 
@@ -493,16 +576,19 @@
       ? cur.scoreWhite : 20;
     ui.setEvalBar(curCp);
 
-    // Best-move arrow for the current position
+    // Guide arrows: blue = the move actually played into this position,
+    // green = the engine's best move from here. On the start ply only the
+    // green suggestion is drawn. Both stay visible when they coincide.
+    const arrows = [];
+    if (last) arrows.push({ from: last.from, to: last.to, color: 'blue' });
     if (cur && cur.best) {
-      ui.setArrows([{
+      arrows.push({
         from: cur.best.slice(0, 2),
         to: cur.best.slice(2, 4),
         color: 'green',
-      }]);
-    } else {
-      ui.setArrows([]);
+      });
     }
+    ui.setArrows(arrows);
 
     ui.refresh();
     highlightCurrentMove();
@@ -525,6 +611,7 @@
     moveListEl.innerHTML = '';
     if (moves.length === 0) {
       moveListEl.innerHTML = '<div class="empty-hint">Load a game, then press <b>Analyze</b>.</div>';
+      buildLegend();
       return;
     }
     for (let i = 0; i < moves.length; i += 2) {
@@ -541,6 +628,36 @@
       })(i));
       moveListEl.appendChild(row);
     }
+    buildLegend();
+  }
+
+  // ── Badge legend: color dot + label (+ count for this game) ────────────────
+  function buildLegend() {
+    const el = $('badge-legend');
+    if (!el) return;
+    const counts = {};
+    perMove.forEach(function (pm) {
+      if (pm.cls) counts[pm.cls] = (counts[pm.cls] || 0) + 1;
+    });
+    el.innerHTML = '';
+    CLASS_ORDER.forEach(function (cls) {
+      const meta = CLASS_META[cls];
+      const item = document.createElement('span');
+      item.className = 'lg-item';
+      const dot = document.createElement('span');
+      dot.className = 'lg-dot';
+      dot.style.background = meta.color;
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(meta.label));
+      if (perMove.length > 0) {
+        const n = counts[cls] || 0;
+        const cnt = document.createElement('span');
+        cnt.className = 'lg-count' + (n ? '' : ' zero');
+        cnt.textContent = String(n);
+        item.appendChild(cnt);
+      }
+      el.appendChild(item);
+    });
   }
 
   function moveCell(ply) {

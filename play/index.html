@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Play Bots — LocalChess</title>
   <link rel="stylesheet" href="../assets/chess-app/board.css" />
+  <link rel="stylesheet" href="../assets/chess-app/play.css" />
 </head>
 <body>
 
@@ -47,6 +48,19 @@
           <option value="w">White</option>
           <option value="b">Black</option>
           <option value="random">Random</option>
+        </select>
+      </div>
+
+      <div class="panel-options">
+        <label class="panel-label" for="time-select">Time control</label>
+        <select id="time-select">
+          <option value="unlimited">Unlimited</option>
+          <option value="1+0">1+0 bullet</option>
+          <option value="3+0">3+0 blitz</option>
+          <option value="3+2">3+2 blitz</option>
+          <option value="5+0">5+0 blitz</option>
+          <option value="5+3">5+3 blitz</option>
+          <option value="10+0">10+0 rapid</option>
         </select>
       </div>
 

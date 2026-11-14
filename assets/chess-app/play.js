@@ -15,6 +15,19 @@
   const SF_PATH = '../assets/vendor/stockfish-19-lite-single.js';
   const SAVE_KEY = 'chess_saved_games';
   const INTRO_KEY = 'chess_bots_intro_seen';
+  const TIME_KEY = 'chess_time_control';
+  const CLOCK_TICK_MS = 100;
+
+  // Time controls: code -> { initialSeconds, incrementSeconds } (Fischer increment).
+  const TIME_CONTROLS = {
+    'unlimited': null,
+    '1+0':  { initial: 60,  increment: 0 },
+    '3+0':  { initial: 180, increment: 0 },
+    '3+2':  { initial: 180, increment: 2 },
+    '5+0':  { initial: 300, increment: 0 },
+    '5+3':  { initial: 300, increment: 3 },
+    '10+0': { initial: 600, increment: 0 },
+  };
 
   // ── DOM handles ────────────────────────────────────────────────────────────
   const $ = function (id) { return document.getElementById(id); };
@@ -38,6 +51,11 @@
   let playerColor = 'w';
   let gameOver = false;
   let pendingEngineReply = false;
+
+  // ── Clock state ─────────────────────────────────────────────────────────────
+  let clockTimer = null;   // setInterval handle (one per game)
+  let clockState = null;   // { w, b, lastTick } — seconds remaining, real-time anchor
+  let timeControl = null;  // active { initial, increment }, or null = unlimited
 
   // ── Engine worker ──────────────────────────────────────────────────────────
   function initEngine() {
@@ -90,6 +108,118 @@
     thinkingEl.classList.toggle('visible', on);
   }
 
+  // ── Chess clock (Fischer timing, implemented here — chess.js has none) ─────
+  function readTimeControl() {
+    const code = $('time-select').value;
+    return Object.prototype.hasOwnProperty.call(TIME_CONTROLS, code)
+      ? TIME_CONTROLS[code] : null;
+  }
+
+  function initTimeSelect() {
+    const sel = $('time-select');
+    let saved = null;
+    try { saved = localStorage.getItem(TIME_KEY); } catch (e) { /* ignore */ }
+    if (saved && Object.prototype.hasOwnProperty.call(TIME_CONTROLS, saved)) {
+      sel.value = saved;
+    }
+    sel.addEventListener('change', function () {
+      try { localStorage.setItem(TIME_KEY, sel.value); } catch (e) { /* ignore */ }
+    });
+  }
+
+  // m:ss, with tenths shown under 10 s (e.g. 0:09.4). Never negative.
+  function formatClock(t) {
+    if (t < 10) {
+      const whole = Math.floor(t);
+      const tenths = Math.floor((t - whole) * 10);
+      return '0:0' + whole + '.' + tenths;
+    }
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function clockChip(color) {
+    return color === playerColor ? $('clock-you') : $('clock-bot');
+  }
+
+  function renderClocks() {
+    ['w', 'b'].forEach(function (color) {
+      const el = clockChip(color);
+      if (!el) return;
+      if (!clockState) {
+        el.textContent = '\u221E';
+        el.classList.remove('clock-low');
+        return;
+      }
+      const t = clockState[color];
+      el.textContent = formatClock(t);
+      el.classList.toggle('clock-low', t < 10);
+    });
+  }
+
+  function stopClock() {
+    if (clockTimer !== null) {
+      clearInterval(clockTimer);
+      clockTimer = null;
+    }
+  }
+
+  function startClock() {
+    stopClock();
+    timeControl = readTimeControl();
+    if (!timeControl) { clockState = null; renderClocks(); return; }
+    clockState = { w: timeControl.initial, b: timeControl.initial, lastTick: Date.now() };
+    renderClocks();
+    clockTimer = setInterval(tickClock, CLOCK_TICK_MS);
+  }
+
+  // The side to move burns real time from game start (white first).
+  function tickClock() {
+    if (!clockState || gameOver || !game) return;
+    const now = Date.now();
+    const side = game.turn();
+    const elapsed = (now - clockState.lastTick) / 1000;
+    clockState.lastTick = now;
+    clockState[side] = Math.max(0, clockState[side] - elapsed);
+    renderClocks();
+    if (clockState[side] <= 0) flagFall(side);
+  }
+
+  // Fischer rule: after a side completes a move, credit its increment.
+  function afterMoveCompleted(color) {
+    if (!clockState || !timeControl) return;
+    if (timeControl.increment > 0) clockState[color] += timeControl.increment;
+    clockState.lastTick = Date.now(); // elapsed so far was charged to the mover
+    renderClocks();
+  }
+
+  // True if `color` could still deliver mate: pawn, rook or queen, or 2+ minors.
+  function hasMatingMaterial(color) {
+    let minors = 0;
+    const board = game.board();
+    for (let r = 0; r < board.length; r++) {
+      for (let f = 0; f < board[r].length; f++) {
+        const sq = board[r][f];
+        if (!sq || sq.color !== color) continue;
+        if (sq.type === 'p' || sq.type === 'r' || sq.type === 'q') return true;
+        if (sq.type === 'n' || sq.type === 'b') minors++;
+      }
+    }
+    return minors >= 2;
+  }
+
+  function flagFall(loserColor) {
+    if (gameOver) return;
+    stopClock();
+    const winner = loserColor === 'w' ? 'b' : 'w';
+    if (hasMatingMaterial(winner)) {
+      finishGame(loserColor === playerColor ? 'You lost' : 'You won!', 'on time');
+    } else {
+      finishGame('Draw', 'timeout vs insufficient material');
+    }
+  }
+
   function maybeEngineTurn() {
     if (gameOver || !game || game.isGameOver()) return;
     if (game.turn() === playerColor) return;
@@ -101,6 +231,7 @@
   }
 
   function applyEngineMove(uci) {
+    if (gameOver || !game) return;
     let move = null;
     // Weak bots may blunder: swap the engine choice for a random legal move.
     if (Math.random() < (bot.engine.blunder || 0)) {
@@ -118,6 +249,7 @@
     if (!move) return;
     ui.setLastMove({ from: move.from, to: move.to });
     ui.refresh();
+    afterMoveCompleted(move.color);
     updateStatus();
     updateMoveList();
     maybeFinish();
@@ -210,6 +342,7 @@
         if (!move) return;
         ui.setLastMove({ from: move.from, to: move.to });
         ui.refresh();
+        afterMoveCompleted(move.color);
         updateStatus();
         updateMoveList();
         maybeFinish();
@@ -223,12 +356,15 @@
     // Nameplates — player always at the bottom (board oriented to player)
     $('plate-bot-g').innerHTML =
       '<span class="plate-avatar">' + bot.emoji + '</span>' +
-      '<span>' + bot.name + ' <small>(' + bot.rating + ')</small></span>';
+      '<span>' + bot.name + ' <small>(' + bot.rating + ')</small></span>' +
+      '<span id="clock-bot" class="clock-chip"></span>';
     $('plate-you-g').innerHTML =
-      '<span class="plate-avatar">\u{1F9CD}</span><span>You</span>';
+      '<span class="plate-avatar">\u{1F9CD}</span><span>You</span>' +
+      '<span id="clock-you" class="clock-chip"></span>';
 
     moveListEl.innerHTML = '';
     updateStatus();
+    startClock();
     showGame();
   }
 
@@ -274,9 +410,6 @@
   // ── Game over / saving ─────────────────────────────────────────────────────
   function maybeFinish() {
     if (gameOver || !game.isGameOver()) return;
-    gameOver = true;
-    setThinking(false);
-
     let result, sub;
     if (game.isCheckmate()) {
       const loser = game.turn();
@@ -291,6 +424,14 @@
     } else {
       result = 'Draw'; sub = '50-move rule';
     }
+    finishGame(result, sub);
+  }
+
+  // Single game-over path: stops the clock, saves and shows the result modal.
+  function finishGame(result, sub) {
+    gameOver = true;
+    setThinking(false);
+    stopClock();
 
     const id = saveGame(result, sub);
     resultText.textContent = result;
@@ -322,6 +463,7 @@
   // ── Wiring ─────────────────────────────────────────────────────────────────
   $('btn-play').addEventListener('click', startGame);
   $('btn-new').addEventListener('click', function () {
+    stopClock();
     destroyEngine();
     resultModal.classList.remove('visible');
     showSelect();
@@ -330,6 +472,7 @@
     if (gameOver) return;
     gameOver = true;
     setThinking(false);
+    stopClock();
     destroyEngine();
     const id = saveGame('You lost', 'by resignation');
     resultText.textContent = 'You lost';
@@ -345,6 +488,7 @@
     startGame();
   });
   $('btn-result-close').addEventListener('click', function () {
+    stopClock();
     resultModal.classList.remove('visible');
   });
   $('btn-intro-x').addEventListener('click', function () {
@@ -358,6 +502,7 @@
   // ── Init ───────────────────────────────────────────────────────────────────
   buildBotPanel();
   selectBot(global.Bots.BOTS[0].id);
+  initTimeSelect();
   showSelect();
 
   // Idle preview board behind the selection panel
