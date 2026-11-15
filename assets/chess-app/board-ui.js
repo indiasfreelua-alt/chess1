@@ -273,25 +273,29 @@
         const dx = c2.x - c1.x, dy = c2.y - c1.y;
         const len = Math.sqrt(dx * dx + dy * dy) || 1;
         const ux = dx / len, uy = dy / len;
-        const startPad = 2.4, endTrim = 3.4;   // keep clear of piece centers
+        const startPad = 2.2, endTrim = 3.6;   // keep clear of piece centers
         const sx = c1.x + ux * startPad, sy = c1.y + uy * startPad;
         const ex = c2.x - ux * endTrim, ey = c2.y - uy * endTrim;
         const color = ARROW_COLORS[a.color] || a.color || ARROW_COLORS.green;
+
+        // Clear arrowhead: wide triangle, shaft stops at the head base so the
+        // round line cap can never blunt the tip.
+        const headLen = 4.6, headW = 3.0;
+        const shaftEndX = ex - ux * (headLen * 0.8);
+        const shaftEndY = ey - uy * (headLen * 0.8);
 
         const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         g.setAttribute('class', 'cb-arrow');
 
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', sx); line.setAttribute('y1', sy);
-        line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+        line.setAttribute('x2', shaftEndX); line.setAttribute('y2', shaftEndY);
         line.setAttribute('stroke', color);
-        line.setAttribute('stroke-width', '2.6');
+        line.setAttribute('stroke-width', '2.2');
         line.setAttribute('stroke-linecap', 'round');
         line.setAttribute('opacity', '0.85');
         g.appendChild(line);
 
-        // Arrow head
-        const headLen = 3.4, headW = 2.2;
         const bx = ex - ux * headLen, by = ey - uy * headLen;
         const px = -uy, py = ux;
         const pts = [
