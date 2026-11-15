@@ -185,6 +185,27 @@ button { font-family: inherit; color: inherit; }
   flex-shrink: 0;
 }
 .side-ico svg { width: 18px; height: 18px; display: block; }
+
+/* Sound toggle — ghost button pinned to the sidebar bottom */
+.sound-toggle {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.sound-toggle:hover { background: var(--surface-3); color: var(--text); }
+.sound-toggle.muted { opacity: 0.6; }
+
 .side-foot {
   margin-top: auto;
   color: var(--text-faint);

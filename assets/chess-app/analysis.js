@@ -562,6 +562,7 @@
 
   // ── Navigation / board view ────────────────────────────────────────────────
   function navigate(ply) {
+    const prevPly = currentPly;
     currentPly = Math.max(0, Math.min(moves.length, ply));
     const replay = new Chess();
     for (let i = 0; i < currentPly; i++) replay.move(moves[i]);
@@ -569,6 +570,11 @@
     ui.setGame(replay);
     const last = currentPly > 0 ? replay.history({ verbose: true }).slice(-1)[0] : null;
     ui.setLastMove(last ? { from: last.from, to: last.to } : null);
+
+    // Step sound — only when the viewed ply actually changes
+    if (window.SoundFx && last && currentPly !== prevPly) {
+      window.SoundFx.playMove(last, replay);
+    }
 
     // Eval bar: evaluation of the CURRENT position (white POV)
     const cur = analysis[currentPly];

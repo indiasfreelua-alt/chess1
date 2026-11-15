@@ -250,6 +250,7 @@
       move = game.move({ from: from, to: to, promotion: promo });
     }
     if (!move) return;
+    if (global.SoundFx) global.SoundFx.playMove(move, game);
     ui.setLastMove({ from: move.from, to: move.to });
     ui.refresh();
     afterMoveCompleted(move.color);
@@ -346,6 +347,7 @@
       onUserMove: function (from, to, promo) {
         const move = game.move({ from: from, to: to, promotion: promo || 'q' });
         if (!move) return;
+        if (global.SoundFx) global.SoundFx.playMove(move, game);
         ui.setLastMove({ from: move.from, to: move.to });
         ui.refresh();
         afterMoveCompleted(move.color);
@@ -438,6 +440,10 @@
     gameOver = true;
     setThinking(false);
     stopClock();
+    if (global.SoundFx) {
+      global.SoundFx.play(result.indexOf('won') !== -1 ? 'win'
+        : result.indexOf('lost') !== -1 ? 'lose' : 'draw');
+    }
 
     const id = saveGame(result, sub);
     resultText.textContent = result;
@@ -480,6 +486,7 @@
     setThinking(false);
     stopClock();
     destroyEngine();
+    if (global.SoundFx) global.SoundFx.play('lose');
     const id = saveGame('You lost', 'by resignation');
     resultText.textContent = 'You lost';
     resultSub.textContent = 'by resignation';
