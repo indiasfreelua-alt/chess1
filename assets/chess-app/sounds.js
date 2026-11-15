@@ -42,8 +42,17 @@
       if (!AC) return null;
       ctx = new AC();
       master = ctx.createGain();
-      master.gain.value = 0.5;
-      master.connect(ctx.destination);
+      master.gain.value = 0.85; // louder output
+      // Clip guard: overlapping layers (capture/castle double-thuds) get
+      // gently compressed instead of distorting at high gain.
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -8;
+      comp.knee.value = 6;
+      comp.ratio.value = 6;
+      comp.attack.value = 0.002;
+      comp.release.value = 0.12;
+      master.connect(comp);
+      comp.connect(ctx.destination);
       // Autoplay policy: resume on the first user gesture
       const resume = function () {
         if (ctx && ctx.state === 'suspended') ctx.resume();
