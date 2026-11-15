@@ -17,7 +17,7 @@
 .review-line {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #81b64c;
+  color: var(--accent-text);
   text-align: center;
   min-height: 1.2em;
 }
@@ -25,7 +25,7 @@
 
 .opening-name {
   font-size: 0.82rem;
-  color: #9f9b90;
+  color: var(--text-muted);
   text-align: center;
   font-style: italic;
 }
@@ -40,11 +40,12 @@
 .progress-row .progress-track { flex: 1; }
 .progress-text {
   font-size: 0.74rem;
-  color: #9f9b90;
+  color: var(--text-muted);
   font-weight: 600;
   white-space: nowrap;
   min-width: 9.5em;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ═══ Engine depth selector ═══ */
@@ -64,22 +65,25 @@
   gap: 0.5rem;
   margin-top: auto;
   padding-top: 0.6rem;
-  background: #262522;
-  border-top: 1px solid #3a3936;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
 }
 .sticky-nav button {
   flex: 1;
-  background: #3d3c37;
-  color: #e8e8e3;
-  border: 1px solid #4a4943;
-  border-radius: 8px;
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   padding: 0.55rem 0.9rem;
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   cursor: pointer;
+  min-height: 38px;
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
 }
-.sticky-nav button:hover { background: #4a4943; }
-.sticky-nav button:disabled { opacity: 0.45; cursor: default; }
+.sticky-nav button:hover { background: var(--surface-4); border-color: var(--border-hover); }
+.sticky-nav button:active { transform: translateY(1px); }
+.sticky-nav button:disabled { opacity: 0.45; cursor: default; transform: none; }
 
 /* ═══ Move list fits the panel flow ═══ */
 .move-list.analysis {
@@ -93,22 +97,24 @@
   flex-wrap: wrap;
   gap: 0.25rem 0.8rem;
   padding: 0.55rem 0.2rem 0.15rem;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  color: #9f9b90;
+  color: var(--text-muted);
 }
 .badge-legend .lg-item { display: inline-flex; align-items: center; gap: 0.32rem; }
 .badge-legend .lg-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   flex: 0 0 auto;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 .badge-legend .lg-count {
-  color: #e8e8e3;
+  color: var(--text);
   font-weight: 800;
   min-width: 1.1em;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .badge-legend .lg-count.zero { opacity: 0.45; }
 
@@ -124,4 +130,5 @@
     overflow: visible;
   }
   .sticky-nav { position: static; }
+  .sticky-nav button { min-height: 42px; }
 }

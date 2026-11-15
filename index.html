@@ -5,53 +5,192 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LocalChess — Play, Train, Review</title>
   <style>
+    :root {
+      --bg: #1c1b18; --surface: #262521; --surface-2: #32312c;
+      --border: #3a3934; --border-strong: #4c4a43;
+      --text: #f0efe9; --text-muted: #b8b5aa; --text-faint: #9e9b90;
+      --accent: #81b64c; --accent-strong: #97cc5f; --accent-deep: #5d8836;
+      --accent-ink: #202a10; --accent-soft: rgba(129,182,76,.14);
+      --radius-md: 10px; --radius-lg: 14px; --radius-full: 999px;
+      --shadow-2: 0 2px 6px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.35);
+      --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { color-scheme: dark; }
     body {
-      background: #21201d; color: #e8e8e3; min-height: 100vh;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      background:
+        radial-gradient(1100px 520px at 50% -10%, rgba(129,182,76,.08), transparent 62%),
+        var(--bg);
+      color: var(--text); min-height: 100vh;
+      font-family: var(--font); line-height: 1.45;
       display: flex; flex-direction: column; align-items: center;
-      padding: 3rem 1rem;
+      -webkit-font-smoothing: antialiased;
     }
-    .brand { font-size: 2rem; font-weight: 800; color: #81b64c; margin-bottom: .4rem; }
-    .tagline { color: #9f9b90; margin-bottom: 2.2rem; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; width: 100%; max-width: 860px; }
+    ::selection { background: rgba(129,182,76,.35); }
+    a { color: var(--accent-strong); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+    .top {
+      width: 100%; max-width: 960px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 1.4rem;
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 1.05rem; color: var(--text); text-decoration: none;
+      letter-spacing: -.01em;
+    }
+    .brand .mark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(145deg, var(--accent-strong), var(--accent-deep));
+      color: #fff; font-size: 1.05rem;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 1px 3px rgba(0,0,0,.3);
+    }
+    .top nav { display: flex; gap: .3rem; }
+    .top nav a {
+      color: var(--text-muted); text-decoration: none; font-weight: 600; font-size: .92rem;
+      padding: .45rem .8rem; border-radius: var(--radius-md);
+      transition: background .13s, color .13s;
+    }
+    .top nav a:hover { background: var(--surface-2); color: #fff; }
+
+    main { width: 100%; max-width: 960px; padding: 2.6rem 1.4rem 0; display: flex; flex-direction: column; align-items: center; }
+    .pill {
+      display: inline-flex; align-items: center; gap: .45rem;
+      font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--accent-strong); background: var(--accent-soft);
+      border: 1px solid rgba(129,182,76,.35); border-radius: var(--radius-full);
+      padding: .3rem .8rem; margin-bottom: 1.2rem;
+    }
+    h1 {
+      font-size: clamp(1.9rem, 4.5vw, 2.7rem); font-weight: 800; letter-spacing: -.02em;
+      text-align: center; max-width: 620px; line-height: 1.15;
+    }
+    .tagline {
+      color: var(--text-muted); font-size: 1.02rem; text-align: center;
+      max-width: 560px; margin: .9rem 0 1.6rem;
+    }
+    .cta-row { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: .45rem;
+      border-radius: var(--radius-md); font-weight: 800; font-size: .98rem;
+      padding: .72rem 1.3rem; text-decoration: none; min-height: 44px;
+      transition: filter .13s, transform .13s, background .13s;
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%, #74a844 100%);
+      color: var(--accent-ink);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 2px 0 var(--accent-deep), 0 1px 3px rgba(0,0,0,.3);
+    }
+    .btn-primary:hover { filter: brightness(1.07); }
+    .btn-primary:active { transform: translateY(2px); }
+    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border-strong); }
+    .btn-secondary:hover { background: #3c3a35; }
+
+    .board-strip {
+      width: min(560px, 86vw); height: 46px; margin: 2.4rem auto 0; border-radius: 10px;
+      background:
+        repeating-conic-gradient(rgba(129,182,76,.16) 0% 25%, rgba(255,255,255,.05) 0% 50%) 0 0 / 92px 92px;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
+      box-shadow: 0 0 0 1px rgba(0,0,0,.4);
+    }
+
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem;
+      width: 100%; max-width: 900px; margin-top: 2.4rem;
+    }
     a.card {
-      display: block; background: #262522; border: 1px solid #3a3936; border-radius: 12px;
-      padding: 1.4rem; text-decoration: none; color: #e8e8e3;
-      transition: transform .12s, border-color .12s;
+      display: block; position: relative;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 1.3rem 1.3rem 1.2rem; text-decoration: none; color: var(--text);
+      box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
+      transition: transform .14s, border-color .14s, box-shadow .14s;
     }
-    a.card:hover { transform: translateY(-3px); border-color: #81b64c; }
-    .card .ico { font-size: 2rem; }
-    .card h2 { font-size: 1.05rem; margin: .5rem 0 .3rem; }
-    .card p { color: #9f9b90; font-size: .86rem; line-height: 1.45; }
-    footer { margin-top: 2.5rem; color: #6e6b63; font-size: .78rem; }
+    a.card:hover {
+      transform: translateY(-3px); border-color: rgba(129,182,76,.55);
+      box-shadow: 0 2px 6px rgba(0,0,0,.25), 0 12px 28px rgba(0,0,0,.35);
+    }
+    .card .ico {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--accent-soft); border: 1px solid rgba(129,182,76,.3);
+      color: var(--accent-strong); margin-bottom: .7rem;
+    }
+    .card .ico svg { width: 20px; height: 20px; display: block; }
+    .card h2 { font-size: 1.02rem; font-weight: 800; margin: 0 0 .3rem; letter-spacing: -.01em; }
+    .card p { color: var(--text-muted); font-size: .86rem; line-height: 1.5; }
+    .card .go {
+      display: inline-flex; align-items: center; gap: .3rem;
+      margin-top: .75rem; font-size: .8rem; font-weight: 700; color: var(--accent-strong);
+      opacity: 0; transform: translateX(-4px); transition: opacity .14s, transform .14s;
+    }
+    a.card:hover .go { opacity: 1; transform: translateX(0); }
+
+    footer {
+      margin-top: auto; padding: 2.6rem 1rem 2rem; text-align: center;
+      color: var(--text-faint); font-size: .78rem;
+    }
+    footer .sep { margin: 0 .45rem; opacity: .5; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+    @media (max-width: 700px) {
+      .top { flex-direction: column; gap: .6rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="brand">♞ LocalChess</div>
-  <div class="tagline">A self-contained chess playground — engine, trainer and review, all client-side.</div>
-  <div class="cards">
-    <a class="card" href="play/">
-      <div class="ico">♟</div>
-      <h2>Play vs Bots</h2>
-      <p>Ten bots from 250 to 2820 Elo, each with its own style. Powered by Stockfish running in your browser.</p>
-    </a>
-    <a class="card" href="puzzles/">
-      <div class="ico">🧩</div>
-      <h2>Puzzle Trainer</h2>
-      <p>Tactical puzzles with hints, instant feedback and progress tracking.</p>
-    </a>
-    <a class="card" href="analysis/">
-      <div class="ico">📈</div>
-      <h2>Game Review</h2>
-      <p>Paste a PGN and get every move graded with accuracy scores and an eval graph.</p>
-    </a>
-    <a class="card" href="play/online/">
-      <div class="ico">👥</div>
-      <h2>Play Online</h2>
-      <p>Invite a friend with a room code and play peer-to-peer over WebRTC.</p>
-    </a>
-  </div>
-  <footer>chess.js (MIT) · Stockfish (GPL-3.0) · app code: original</footer>
+  <header class="top">
+    <a class="brand" href="./"><span class="mark">♞</span> LocalChess</a>
+    <nav>
+      <a href="play/">Play</a>
+      <a href="puzzles/">Puzzles</a>
+      <a href="analysis/">Review</a>
+      <a href="play/online/">Online</a>
+    </nav>
+  </header>
+
+  <main>
+    <span class="pill">✦ Free · Local · No account</span>
+    <h1>Every part of chess, running entirely in your browser.</h1>
+    <p class="tagline">A self-contained chess playground — engine, trainer and review, all client-side. Nothing to install, nothing to sign up for.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="play/">Play now</a>
+      <a class="btn btn-secondary" href="puzzles/">Browse puzzles</a>
+    </div>
+
+    <div class="board-strip" aria-hidden="true"></div>
+
+    <div class="cards">
+      <a class="card" href="play/">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="3.4"/><path d="M9.6 10.8 8.2 16.5h7.6l-1.4-5.7"/><path d="M6.2 20h11.6"/></svg></span>
+        <h2>Play vs Bots</h2>
+        <p>Ten bots from 250 to 2820 Elo, each with its own style. Powered by Stockfish running in your browser.</p>
+        <span class="go">Open →</span>
+      </a>
+      <a class="card" href="puzzles/">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h3.2a1.9 1.9 0 1 1 3.6 0H18a1 1 0 0 1 1 1v3.2a1.9 1.9 0 1 0 0 3.6V17a1 1 0 0 1-1 1h-3.2a1.9 1.9 0 1 1-3.6 0H8a1 1 0 0 1-1-1v-3.2a1.9 1.9 0 1 0 0-3.6V5a1 1 0 0 1 1-1z"/></svg></span>
+        <h2>Puzzle Trainer</h2>
+        <p>Tactical puzzles with hints, instant feedback and progress tracking.</p>
+        <span class="go">Open →</span>
+      </a>
+      <a class="card" href="analysis/">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v15a1 1 0 0 0 1 1h15"/><path d="m7.5 14.5 3.5-3.5 2.5 2.5 5-5"/><path d="M15.5 8.5h3v3"/></svg></span>
+        <h2>Game Review</h2>
+        <p>Paste a PGN and get every move graded with accuracy scores and an eval graph.</p>
+        <span class="go">Open →</span>
+      </a>
+      <a class="card" href="play/online/">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.1"/><path d="M3.6 19c.6-3 2.7-4.7 5.4-4.7s4.8 1.7 5.4 4.7"/><circle cx="17" cy="9.2" r="2.5"/><path d="M16.7 14.5c2.1.4 3.5 1.9 4 4"/></svg></span>
+        <h2>Play Online</h2>
+        <p>Invite a friend with a room code and play peer-to-peer over WebRTC.</p>
+        <span class="go">Open →</span>
+      </a>
+    </div>
+  </main>
+
+  <footer>chess.js (MIT)<span class="sep">·</span>Stockfish (GPL-3.0)<span class="sep">·</span>app code: original</footer>
 </body>
 </html>

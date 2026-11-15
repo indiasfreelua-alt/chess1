@@ -148,10 +148,13 @@
       const el = clockChip(color);
       if (!el) return;
       if (!clockState) {
-        el.textContent = '\u221E';
+        // Unlimited game — no clock chip at all
+        el.textContent = '';
+        el.classList.add('clock-unlimited');
         el.classList.remove('clock-low');
         return;
       }
+      el.classList.remove('clock-unlimited');
       const t = clockState[color];
       el.textContent = formatClock(t);
       el.classList.toggle('clock-low', t < 10);
