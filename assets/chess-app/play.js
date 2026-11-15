@@ -310,6 +310,9 @@
     quip.textContent = '“' + bot.quip + '”';
     quip.classList.remove('hidden');
     markSelectedChip();
+    // Keep the preview nameplate in sync with the chosen opponent
+    const pvAvatar = document.querySelector('#plate-bot .plate-avatar');
+    if (pvAvatar) pvAvatar.textContent = bot.emoji;
   }
 
   // ── Screen switching ───────────────────────────────────────────────────────
@@ -514,10 +517,11 @@
     canPick: function () { return false; },
   });
   previewUi.setGame(new Chess());
-  previewUi.setLastMove({ from: 'e2', to: 'e4' });
   previewUi.refresh();
+  const firstBot = global.Bots.BOTS[0];
   $('plate-bot').innerHTML =
-    '<span class="plate-avatar">\u{1F916}</span><span>Play Bots <small>(preview)</small></span>';
+    '<span class="plate-avatar">' + (firstBot ? firstBot.emoji : '\u{1F916}') + '</span>' +
+    '<span>Play Bots <small>(preview)</small></span>';
   $('plate-you').innerHTML =
     '<span class="plate-avatar">\u{1F9CD}</span><span>You</span>';
 
