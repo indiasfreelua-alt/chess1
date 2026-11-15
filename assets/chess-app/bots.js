@@ -75,6 +75,12 @@
       desc: 'Maximum strength. The end of the line for your Elo.',
       engine: { skill: 20, elo: null, movetime: 800, blunder: 0 },
     },
+    {
+      id: 'singularity', name: 'Singularity', emoji: '\u{1F30C}', rating: 4400, cat: 'engine',
+      quip: 'I have seen the end of every line you will ever play.',
+      desc: 'Not a person. Not even pretending. Advertised 4400 — good luck.',
+      engine: { skill: 20, elo: null, movetime: 1500, blunder: 0 },
+    },
   ];
 
   const CATEGORIES = [
@@ -83,6 +89,7 @@
     { id: 'intermediate', label: 'Intermediate' },
     { id: 'advanced',     label: 'Advanced' },
     { id: 'master',       label: 'Master' },
+    { id: 'engine',       label: 'Engine' },
   ];
 
   function getBot(id) {
