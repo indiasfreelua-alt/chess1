@@ -1,0 +1,35 @@
+/* play.css — page-specific styles for the Play-vs-Bots page (bots.html).
+   All values flow from the design tokens in board.css.                   */
+
+/* ── Clock chips (inside the game nameplates) ─────────────────────────────── */
+.clock-chip {
+  margin-left: auto;
+  min-width: 4.6rem;
+  padding: 0.22rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+/* Unlimited games carry no clock — hide the chip entirely */
+.clock-chip.clock-unlimited { display: none; }
+
+/* Low-time warning: pulsing red under 10 seconds */
+.clock-chip.clock-low {
+  color: var(--danger);
+  border-color: var(--danger);
+  animation: clock-pulse 1s ease-in-out infinite;
+}
+
+@keyframes clock-pulse {
+  0%, 100% { background: var(--surface); }
+  50%      { background: rgba(255, 92, 71, 0.16); }
+}
