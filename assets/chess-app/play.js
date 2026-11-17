@@ -260,17 +260,24 @@
   }
 
   // ── Bot panel (selection screen) ───────────────────────────────────────────
+  function categoryLabel(catId) {
+    const cat = global.Bots.CATEGORIES.find(function (c) { return c.id === catId; });
+    return cat ? cat.label : 'Bot';
+  }
+
   function buildBotPanel() {
     botCats.innerHTML = '';
     global.Bots.CATEGORIES.forEach(function (cat) {
       const bots = global.Bots.byCategory(cat.id);
       const row = document.createElement('div');
       row.className = 'cat-row';
+      row.dataset.cat = cat.id;
 
       const avatars = document.createElement('div');
       avatars.className = 'cat-avatars';
       bots.forEach(function (b) {
         const chip = document.createElement('button');
+        chip.type = 'button';
         chip.className = 'cat-avatar';
         chip.dataset.bot = b.id;
         chip.title = b.name + ' (' + b.rating + ')';
@@ -279,16 +286,23 @@
         avatars.appendChild(chip);
       });
 
+      const meta = document.createElement('div');
+      meta.className = 'cat-meta';
       const name = document.createElement('span');
       name.className = 'cat-name';
       name.textContent = cat.label;
+      const sub = document.createElement('span');
+      sub.className = 'cat-sub';
+      sub.textContent = bots.map(function (b) { return b.rating; }).join(' · ');
+      meta.appendChild(name);
+      meta.appendChild(sub);
 
       const count = document.createElement('span');
       count.className = 'cat-count';
       count.textContent = bots.length + (bots.length === 1 ? ' bot' : ' bots');
 
       row.appendChild(avatars);
-      row.appendChild(name);
+      row.appendChild(meta);
       row.appendChild(count);
       botCats.appendChild(row);
     });
@@ -299,6 +313,31 @@
     botCats.querySelectorAll('.cat-avatar').forEach(function (chip) {
       chip.classList.toggle('selected', !!bot && chip.dataset.bot === bot.id);
     });
+    botCats.querySelectorAll('.cat-row').forEach(function (row) {
+      row.classList.toggle('has-selected', !!bot && row.dataset.cat === bot.cat);
+    });
+  }
+
+  // Nameplate above the preview board — always mirrors the chosen opponent.
+  function renderPreviewPlate() {
+    if (!bot) return;
+    $('plate-bot').innerHTML =
+      '<span class="plate-avatar">' + bot.emoji + '</span>' +
+      '<span class="plate-name">' + bot.name +
+      ' <small>' + bot.rating + ' Elo</small></span>' +
+      '<span class="plate-tag">' + categoryLabel(bot.cat) + '</span>';
+  }
+
+  function sideLabel() {
+    const v = $('side-select').value;
+    return v === 'w' ? 'White' : v === 'b' ? 'Black' : 'Random side';
+  }
+
+  function renderYouPlate() {
+    $('plate-you').innerHTML =
+      '<span class="plate-avatar">\u{1F9CD}</span>' +
+      '<span class="plate-name">You <small>' + sideLabel() + '</small></span>' +
+      '<span class="plate-tag plate-tag-quiet">ready</span>';
   }
 
   function selectBot(id) {
@@ -306,14 +345,14 @@
     if (!bot) return;
     $('sb-avatar').textContent = bot.emoji;
     $('sb-name').textContent = bot.name;
-    $('sb-rating').textContent = bot.rating;
+    $('sb-rating').textContent = bot.rating + ' Elo';
+    $('sb-cat').textContent = categoryLabel(bot.cat);
+    $('sb-desc').textContent = bot.desc || '';
     const quip = $('bot-quip');
     quip.textContent = '“' + bot.quip + '”';
     quip.classList.remove('hidden');
     markSelectedChip();
-    // Keep the preview nameplate in sync with the chosen opponent
-    const pvAvatar = document.querySelector('#plate-bot .plate-avatar');
-    if (pvAvatar) pvAvatar.textContent = bot.emoji;
+    renderPreviewPlate();
   }
 
   // ── Screen switching ───────────────────────────────────────────────────────
@@ -364,11 +403,13 @@
     // Nameplates — player always at the bottom (board oriented to player)
     $('plate-bot-g').innerHTML =
       '<span class="plate-avatar">' + bot.emoji + '</span>' +
-      '<span>' + bot.name + ' <small>(' + bot.rating + ')</small></span>' +
+      '<span class="plate-name">' + bot.name + ' <small>' + bot.rating + '</small></span>' +
       '<span id="clock-bot" class="clock-chip"></span>';
     $('plate-you-g').innerHTML =
-      '<span class="plate-avatar">\u{1F9CD}</span><span>You</span>' +
+      '<span class="plate-avatar">\u{1F9CD}</span><span class="plate-name">You</span>' +
       '<span id="clock-you" class="clock-chip"></span>';
+    $('game-panel-title').textContent = bot.name;
+    $('game-panel-tag').textContent = categoryLabel(bot.cat);
 
     moveListEl.innerHTML = '';
     updateStatus();
@@ -392,9 +433,42 @@
     statusEl.textContent = text;
   }
 
+  // Compact game facts under the status line (clock / side / ply / material).
+  const PIECE_VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+  function updateGameMeta() {
+    const el = $('game-meta');
+    if (!el || !game) return;
+    const history = game.history({ verbose: true });
+    let mine = 0, theirs = 0;
+    history.forEach(function (m) {
+      if (!m.captured) return;
+      const v = PIECE_VALUE[m.captured] || 0;
+      if (m.color === playerColor) mine += v; else theirs += v;
+    });
+    const diff = mine - theirs;
+    const tc = $('time-select').value;
+    const chips = [
+      '<span class="meta-chip">' + (tc === 'unlimited' ? 'No clock' : tc) + '</span>',
+      '<span class="meta-chip">You: ' + (playerColor === 'w' ? 'White' : 'Black') + '</span>',
+      '<span class="meta-chip">Move ' + Math.max(1, Math.ceil(history.length / 2)) + '</span>',
+      '<span class="meta-chip' + (diff > 0 ? ' pos' : diff < 0 ? ' neg' : '') + '">' +
+        (diff === 0 ? 'Material even' : 'Material ' + (diff > 0 ? '+' : '−') + Math.abs(diff)) +
+      '</span>',
+    ];
+    el.innerHTML = chips.join('');
+  }
+
   function updateMoveList() {
     const history = game.history({ verbose: true });
+    updateGameMeta();
     moveListEl.innerHTML = '';
+    if (!history.length) {
+      const empty = document.createElement('div');
+      empty.className = 'move-empty';
+      empty.textContent = 'Moves will appear here.';
+      moveListEl.appendChild(empty);
+      return;
+    }
     for (let i = 0; i < history.length; i += 2) {
       const row = document.createElement('div');
       row.className = 'mv-row';
@@ -518,6 +592,26 @@
   initTimeSelect();
   showSelect();
 
+  // Lobby stat chips
+  const ratings = global.Bots.BOTS.map(function (b) { return b.rating; });
+  const minElo = Math.min.apply(null, ratings);
+  const maxElo = Math.max.apply(null, ratings);
+  $('lobby-bot-count').textContent = String(global.Bots.BOTS.length);
+  $('panel-count').textContent = global.Bots.BOTS.length + ' bots';
+  $('lobby-elo-range').textContent = minElo + '–' + maxElo;
+  renderYouPlate();
+  $('side-select').addEventListener('change', renderYouPlate);
+
+  // Enter starts the game while the lobby is on screen
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    if (!selectView.classList.contains('active')) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (resultModal.classList.contains('visible')) return;
+    startGame();
+  });
+
   // Idle preview board behind the selection panel
   previewUi = new BoardUI('board-mount', {
     orientation: 'w',
@@ -525,12 +619,6 @@
   });
   previewUi.setGame(new Chess());
   previewUi.refresh();
-  const firstBot = global.Bots.BOTS[0];
-  $('plate-bot').innerHTML =
-    '<span class="plate-avatar">' + (firstBot ? firstBot.emoji : '\u{1F916}') + '</span>' +
-    '<span>Play Bots <small>(preview)</small></span>';
-  $('plate-you').innerHTML =
-    '<span class="plate-avatar">\u{1F9CD}</span><span>You</span>';
 
   // Show intro modal on first visit
   let seen = false;
