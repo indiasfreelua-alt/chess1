@@ -457,12 +457,15 @@
       const before = analysis[i];
       const after = analysis[i + 1];
 
-      // Best-move value from mover POV = engine score at position i
+      // Both values are from the MOVER's point of view: "before" is the eval
+      // of the position the mover is in, "after" is the eval of the position
+      // they created for the opponent. Same white-POV -> mover-POV conversion
+      // on both sides keeps the subtraction meaningful (mixing the two signs
+      // made every non-best move look like a huge loss for White).
       const bestVal = before && before.scoreWhite !== null && before.scoreWhite !== undefined
         ? (moverIsWhite ? before.scoreWhite : -before.scoreWhite) : null;
-      // Played-move value from mover POV = -(score after, opponent POV)
       const playedVal = after && after.scoreWhite !== null && after.scoreWhite !== undefined
-        ? (moverIsWhite ? -after.scoreWhite : after.scoreWhite) : null;
+        ? (moverIsWhite ? after.scoreWhite : -after.scoreWhite) : null;
 
       const cpl = moveCpl(bestVal, playedVal);
 
