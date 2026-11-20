@@ -12,12 +12,6 @@
   const listEl = $('pz-list');
   const successEl = $('pz-success');
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-
   // ── Feedback helpers ────────────────────────────────────────────────────
   function say(text, kind) {
     messageEl.textContent = text || '';
@@ -140,9 +134,21 @@
 
   function renderPlate() {
     const p = T.getCurrentPuzzle();
-    plateEl.innerHTML =
-      '<span class="plate-avatar">🧩</span><span>' + escapeHtml(p.title) +
-      ' <small>· ' + escapeHtml(p.theme) + ' · rating ' + p.rating + '</small></span>';
+
+    const avatar = document.createElement('span');
+    avatar.className = 'plate-avatar';
+    avatar.textContent = '\u{1F9E9}';
+
+    const label = document.createElement('span');
+    label.textContent = p.title + ' ';
+
+    const small = document.createElement('small');
+    small.textContent = '\u00b7 ' + p.theme + ' \u00b7 rating ' + Number(p.rating);
+
+    label.appendChild(small);
+    plateEl.textContent = '';
+    plateEl.appendChild(avatar);
+    plateEl.appendChild(label);
   }
 
   function renderMeta() {
