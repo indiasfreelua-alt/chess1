@@ -25,7 +25,7 @@
 
   const GLYPHS = {
     // Both colors use the filled glyphs; CSS classes (fill + text-stroke)
-    // distinguish white/black, giving chess.com-style solid pieces.
+    // distinguish white/black, giving solid, high-contrast pieces.
     wK: '\u265A', wQ: '\u265B', wR: '\u265C', wB: '\u265D', wN: '\u265E', wP: '\u265F',
     bK: '\u265A', bQ: '\u265B', bR: '\u265C', bB: '\u265D', bN: '\u265E', bP: '\u265F',
   };

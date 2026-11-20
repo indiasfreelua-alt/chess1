@@ -1,6 +1,6 @@
 /**
  * bots.js — Bot roster for local Play-vs-Computer
- * Original bot characters for this test harness (not chess.com assets).
+ * Original bot characters written for LocalChess.
  *
  * Bots are grouped into difficulty categories like modern chess sites do:
  * new / beginner / intermediate / advanced / master.

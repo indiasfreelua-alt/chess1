@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Play Online — LocalChess</title>
   <link rel="stylesheet" href="../../assets/chess-app/board.css" />
   <link rel="stylesheet" href="../../assets/chess-app/online.css" />
+  <link rel="icon" type="image/x-icon" href="../../assets/chess-app/favicon.ico" />
 </head>
 <body>
 
@@ -91,20 +93,15 @@
     </div>
   </div>
 
-  <!-- PeerJS from CDN — free public signaling broker, no API key.
-       WebRTC data channels carry the moves peer-to-peer. -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- PeerJS 1.5.4, vendored locally so no third-party script is fetched at
+       runtime. The public signaling broker still needs internet access; the
+       moves themselves travel peer-to-peer over a WebRTC data channel. -->
+  <script src="../../assets/chess-app/peerjs.min.js"></script>
 
   <!-- chess.js CJS shim → window.Chess -->
-  <script>
-    window.exports = {};
-    window.module = { exports: window.exports };
-  </script>
+    <script src="../../assets/chess-app/shim-pre.js"></script>
   <script src="../../assets/vendor/chess.js"></script>
-  <script>
-    if (window.module.exports.Chess) window.Chess = window.module.exports.Chess;
-    delete window.module; delete window.exports;
-  </script>
+    <script src="../../assets/chess-app/shim-post.js"></script>
 
   <script src="../../assets/chess-app/board-ui.js"></script>
   <script src="../../assets/chess-app/online.js"></script>

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.peerjs.com wss://*.peerjs.com; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Play Bots — LocalChess</title>
   <link rel="stylesheet" href="../assets/chess-app/board.css" />
   <link rel="stylesheet" href="../assets/chess-app/play.css" />
+  <link rel="icon" type="image/x-icon" href="../assets/chess-app/favicon.ico" />
 </head>
 <body>
 
@@ -147,15 +149,9 @@
   </div>
 
   <!-- chess.js CJS shim → window.Chess -->
-  <script>
-    window.exports = {};
-    window.module = { exports: window.exports };
-  </script>
+    <script src="../assets/chess-app/shim-pre.js"></script>
   <script src="../assets/vendor/chess.js"></script>
-  <script>
-    if (window.module.exports.Chess) window.Chess = window.module.exports.Chess;
-    delete window.module; delete window.exports;
-  </script>
+    <script src="../assets/chess-app/shim-post.js"></script>
 
   <script src="../assets/chess-app/board-ui.js"></script>
   <script src="../assets/chess-app/sounds.js"></script>

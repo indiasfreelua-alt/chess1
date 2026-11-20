@@ -61,6 +61,7 @@
     if (conn) { try { conn.close(); } catch (e) { /* ignore */ } conn = null; }
     if (peer) { try { peer.destroy(); } catch (e) { /* ignore */ } peer = null; }
     connected = false;
+    helloServed = false;
   }
 
   // ── Message protocol ───────────────────────────────────────────────────────
@@ -68,12 +69,52 @@
     if (conn && conn.open) conn.send(obj);
   }
 
+  // ── Untrusted input ────────────────────────────────────────────────────────
+  // Every message below arrives from a peer we do not control. Fields are
+  // validated against an exact shape before use; anything unexpected is
+  // dropped without touching the DOM or the game state.
+  const SQUARE_RE = /^[a-h][1-8]$/;
+  const PROMO_RE = /^[qrbn]$/;
+  const MAX_SYNC_PLIES = 600;
+  const MAX_MSG_PER_SEC = 60;
+
+  let msgWindowStart = 0;
+  let msgCount = 0;
+  let helloServed = false;
+
+  function underRateLimit() {
+    const now = Date.now();
+    if (now - msgWindowStart > 1000) { msgWindowStart = now; msgCount = 0; }
+    msgCount++;
+    return msgCount <= MAX_MSG_PER_SEC;
+  }
+
+  function isColor(v) { return v === 'w' || v === 'b'; }
+
+  function validMoveMessage(msg) {
+    if (!SQUARE_RE.test(msg.from) || !SQUARE_RE.test(msg.to)) return false;
+    if (msg.promo !== undefined && msg.promo !== null && !PROMO_RE.test(msg.promo)) return false;
+    if (msg.ply !== undefined && !(typeof msg.ply === 'number' && isFinite(msg.ply) && msg.ply >= 0 && msg.ply <= MAX_SYNC_PLIES)) return false;
+    return true;
+  }
+
+  function validSyncMessage(msg) {
+    if (!Array.isArray(msg.moves)) return false;
+    if (msg.moves.length > MAX_SYNC_PLIES) return false;
+    return msg.moves.every(function (m) {
+      return typeof m === 'string' && m.length > 0 && m.length <= 12;
+    });
+  }
+
   function onMessage(data) {
-    if (!data || typeof data !== 'object') return;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return;
+    if (!underRateLimit()) return;
     switch (data.t) {
       case 'hello':
-        // Host receives guest hello -> assign colors and start.
-        if (isHost) {
+        // Host receives guest hello -> assign colors and start. Only once per
+        // connection, so a peer cannot keep resetting the board.
+        if (isHost && !helloServed) {
+          helloServed = true;
           myColor = Math.random() < 0.5 ? 'w' : 'b';
           const oppColor = myColor === 'w' ? 'b' : 'w';
           send({ t: 'start', yourColor: oppColor, hostColor: myColor });
@@ -82,19 +123,20 @@
         break;
 
       case 'start':
-        if (!isHost) beginGame(data.yourColor);
+        if (!isHost && isColor(data.yourColor)) beginGame(data.yourColor);
         break;
 
       case 'move':
-        receiveMove(data);
+        if (validMoveMessage(data)) receiveMove(data);
         break;
 
       case 'sync-req':
+        if (!game) return;
         send({ t: 'sync', moves: game.history(), ply: game.history().length });
         break;
 
       case 'sync':
-        applySync(data);
+        if (validSyncMessage(data)) applySync(data);
         break;
 
       case 'resign':
@@ -109,7 +151,8 @@
         break;
 
       case 'rematch-start':
-        beginGameRematch(data.yourColor);
+        if (isColor(data.yourColor)) beginGameRematch(data.yourColor);
+        else beginGameRematch();
         break;
 
       case 'bye':
@@ -120,7 +163,7 @@
   }
 
   function receiveMove(msg) {
-    if (gameOver) return;
+    if (!game || gameOver) return;
     const history = game.history();
     if (typeof msg.ply === 'number' && msg.ply !== history.length) {
       // Out of sync — request authoritative state from the other side.
@@ -141,6 +184,7 @@
   }
 
   function applySync(msg) {
+    if (!game) return;
     if (!Array.isArray(msg.moves)) return;
     const replay = new global.Chess();
     let ok = true;
@@ -162,7 +206,7 @@
 
   // ── Game lifecycle ─────────────────────────────────────────────────────────
   function beginGame(color) {
-    myColor = color;
+    myColor = isColor(color) ? color : 'w';
     gameOver = false;
     lastSyncPly = 0;
     game = new global.Chess();
@@ -173,10 +217,7 @@
   }
 
   function beginGameRematch(myNextColor) {
-    if (typeof myNextColor !== 'string') {
-      myNextColor = myColor === 'w' ? 'b' : 'w';
-    }
-    beginGame(myNextColor);
+    beginGame(isColor(myNextColor) ? myNextColor : (myColor === 'w' ? 'b' : 'w'));
   }
 
   function buildGameBoard() {
