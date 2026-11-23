@@ -51,6 +51,7 @@
   let playerColor = 'w';
   let gameOver = false;
   let pendingEngineReply = false;
+  let resultTimer = null;
 
   // ── Clock state ─────────────────────────────────────────────────────────────
   let clockTimer = null;   // setInterval handle (one per game)
@@ -367,7 +368,10 @@
   }
 
   // ── Game start ─────────────────────────────────────────────────────────────
+  function clearResultTimer() { if (resultTimer) { clearTimeout(resultTimer); resultTimer = null; } }
+
   function startGame() {
+    clearResultTimer();
     if (!bot) bot = global.Bots.BOTS[0];
     const choice = $('side-select').value;
     playerColor = choice === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : choice;
@@ -510,10 +514,11 @@
   }
 
   // Single game-over path: stops the clock, saves and shows the result modal.
-  function finishGame(result, sub) {
+  function finishGame(result, sub, immediate) {
     gameOver = true;
     setThinking(false);
     stopClock();
+    clearResultTimer();
     if (global.SoundFx) {
       global.SoundFx.play(result.indexOf('won') !== -1 ? 'win'
         : result.indexOf('lost') !== -1 ? 'lose' : 'draw');
@@ -522,10 +527,21 @@
     const id = saveGame(result, sub);
     resultText.textContent = result;
     resultSub.textContent = sub;
+    if (global.BoardUI && global.BoardUI.renderResultStats) {
+      global.BoardUI.renderResultStats($('result-stats'), game, playerColor);
+    }
     $('btn-analyze').onclick = function () {
       window.location.href = '../analysis/?game=' + id;
     };
-    resultModal.classList.add('visible');
+    const delay = immediate ? 0 : (game && game.isCheckmate() ? 750 : 300);
+    if (delay === 0) {
+      resultModal.classList.add('visible');
+    } else {
+      resultTimer = setTimeout(function () {
+        resultTimer = null;
+        resultModal.classList.add('visible');
+      }, delay);
+    }
   }
 
   function saveGame(result, sub) {
@@ -551,13 +567,14 @@
   $('btn-new').addEventListener('click', function () {
     stopClock();
     destroyEngine();
+    clearResultTimer();
     resultModal.classList.remove('visible');
     showSelect();
   });
   $('btn-resign').addEventListener('click', function () {
     if (gameOver) return;
     destroyEngine();
-    finishGame('You lost', 'by resignation');
+    finishGame('You lost', 'by resignation', true);
   });
   $('btn-flip').addEventListener('click', function () { ui && ui.flip(); });
   $('btn-rematch').addEventListener('click', function () {

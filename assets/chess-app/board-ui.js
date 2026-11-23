@@ -159,6 +159,9 @@
       const lastFrom = this.lastMove ? this.lastMove.from : null;
       const lastTo = this.lastMove ? this.lastMove.to : null;
       const targets = new Set(this.legalTargets);
+      const inCheck = this.game && this.game.isCheck();
+      const isMate = this.game && this.game.isCheckmate();
+      const turnColor = this.game ? this.game.turn() : null;
 
       for (let r = 0; r < 8; r++) {
         for (let f = 0; f < 8; f++) {
@@ -183,6 +186,13 @@
             pieceSpan.className = 'cb-piece ' + (piece.color === 'w' ? 'white' : 'black');
             pieceSpan.textContent = GLYPHS[piece.color + piece.type.toUpperCase()];
             pieceSpan.dataset.sq = sq;
+            if (piece.type === 'k' && piece.color === turnColor && inCheck) {
+              cell.classList.add('check');
+              if (isMate) {
+                cell.classList.add('checkmate');
+                pieceSpan.classList.add('cb-king-mated');
+              }
+            }
             cell.appendChild(pieceSpan);
           }
 
@@ -334,6 +344,58 @@
       }
     }
   }
+
+  BoardUI.renderResultStats = function (container, game, myColor) {
+    if (!container || !game) return;
+    container.textContent = '';
+    const vals = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+    const history = game.history({ verbose: true });
+    let myCaps = 0, oppCaps = 0, myChecks = 0, oppChecks = 0;
+    history.forEach(function (m) {
+      const mine = m.color === myColor;
+      if (m.captured) { if (mine) myCaps++; else oppCaps++; }
+      if (m.san && (m.san.indexOf('+') !== -1 || m.san.indexOf('#') !== -1)) {
+        if (mine) myChecks++; else oppChecks++;
+      }
+    });
+    let myMat = 0, oppMat = 0;
+    game.board().forEach(function (row) {
+      row.forEach(function (sq) {
+        if (!sq || !vals[sq.type]) return;
+        if (sq.color === myColor) myMat += vals[sq.type]; else oppMat += vals[sq.type];
+      });
+    });
+    const diff = myMat - oppMat;
+    const movesCount = Math.ceil(history.length / 2);
+
+    const grid = document.createElement('div');
+    grid.className = 'rs-grid';
+    [
+      ['Moves', String(movesCount)],
+      ['Captures', myCaps + ' / ' + oppCaps],
+      ['Checks', myChecks + ' / ' + oppChecks],
+      ['Material', diff === 0 ? 'Even' : (diff > 0 ? '+' : '−') + Math.abs(diff)],
+    ].forEach(function (pair) {
+      const card = document.createElement('div');
+      card.className = 'rs-item';
+      const lbl = document.createElement('span');
+      lbl.className = 'rs-lbl';
+      lbl.textContent = pair[0];
+      const val = document.createElement('span');
+      val.className = 'rs-val';
+      val.textContent = pair[1];
+      card.appendChild(lbl);
+      card.appendChild(val);
+      grid.appendChild(card);
+    });
+    container.appendChild(grid);
+
+    const note = document.createElement('p');
+    note.className = 'rs-note';
+    const matTxt = diff === 0 ? 'material even' : (diff > 0 ? '+' + diff + ' material ahead' : '−' + Math.abs(diff) + ' material behind');
+    note.textContent = movesCount + ' moves · ' + matTxt + ' · Open Analyze game for move-by-move grading.';
+    container.appendChild(note);
+  };
 
   global.BoardUI = BoardUI;
 })(window);

@@ -1099,7 +1099,9 @@ button.destructive:hover, #btn-resign:hover {
 
 /* ═══ 9. Modals & dialogs ════════════════════════════════════════ */
 .modal-overlay {
-  display: none;
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
   position: fixed;
   inset: 0;
   background: rgba(15, 14, 12, 0.62);
@@ -1109,8 +1111,9 @@ button.destructive:hover, #btn-resign:hover {
   justify-content: center;
   z-index: 100;
   padding: var(--space-4);
+  transition: opacity 0.28s ease;
 }
-.modal-overlay.visible { display: flex; }
+.modal-overlay.visible { opacity: 1; pointer-events: auto; }
 .modal-box {
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -1124,12 +1127,30 @@ button.destructive:hover, #btn-resign:hover {
   max-width: 440px;
   position: relative;
   box-shadow: var(--shadow-2);
-  animation: modal-in 0.18s var(--ease);
+  transform: translateY(18px) scale(0.94);
+  opacity: 0;
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
 }
-@keyframes modal-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+.modal-overlay.visible .modal-box { transform: translateY(0) scale(1); opacity: 1; }
+.cb-square.check { background-image: radial-gradient(circle, rgba(235, 65, 50, 0.75) 0%, rgba(210, 40, 28, 0.35) 55%, transparent 78%); }
+.cb-square.checkmate { animation: mate-pulse 1.1s ease-out infinite alternate; }
+@keyframes mate-pulse {
+  from { box-shadow: inset 0 0 14px rgba(235, 65, 50, 0.85); }
+  to   { box-shadow: inset 0 0 26px rgba(255, 95, 75, 0.95); }
 }
+.cb-piece.cb-king-mated { animation: king-topple 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; transform-origin: 50% 72%; }
+@keyframes king-topple {
+  0%   { transform: rotate(0deg) scale(1); }
+  35%  { transform: rotate(-10deg) scale(1.06); }
+  100% { transform: rotate(24deg) scale(0.96); opacity: 0.9; }
+}
+.result-stats { width: 100%; display: flex; flex-direction: column; gap: 0.5rem; margin: 0.15rem 0 0.25rem; }
+.result-stats:empty { display: none; }
+.rs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.rs-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.42rem 0.35rem; text-align: center; display: flex; flex-direction: column; gap: 0.1rem; }
+.rs-lbl { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); font-weight: 700; }
+.rs-val { font-size: 0.86rem; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.rs-note { font-size: 0.76rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
 .modal-box h3 { font-size: 1.3rem; }
 .modal-sub { color: var(--text-muted); font-size: var(--fs-md); text-align: center; line-height: 1.5; }
 .modal-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }

@@ -29,7 +29,9 @@
   let roomCode = '';
   let connected = false;
   let gameOver = false;
-  let lastSyncPly = -1;     // last ply we know the opponent agrees on
+  let lastSyncPly = -1;
+  let resultTimer = null;
+  function clearResultTimer() { if (resultTimer) { clearTimeout(resultTimer); resultTimer = null; } }     // last ply we know the opponent agrees on
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   function makeCode() {
@@ -206,6 +208,7 @@
 
   // ── Game lifecycle ─────────────────────────────────────────────────────────
   function beginGame(color) {
+    clearResultTimer();
     myColor = isColor(color) ? color : 'w';
     gameOver = false;
     lastSyncPly = 0;
@@ -301,18 +304,30 @@
     finishGame(result, sub, false);
   }
 
-  function finishGame(result, sub, fromOpponentAction) {
+  function finishGame(result, sub, fromOpponentAction, immediate) {
     gameOver = true;
+    clearResultTimer();
     const id = saveGame(result, sub);
     $('result-text').textContent = result;
     $('result-sub').textContent = sub;
+    if (global.BoardUI && global.BoardUI.renderResultStats) {
+      global.BoardUI.renderResultStats($('result-stats'), game, myColor);
+    }
     $('btn-analyze').onclick = function () {
       window.location.href = '../../analysis/?game=' + id;
     };
     // Only the host may propose a rematch (single source of truth).
     $('btn-rematch').classList.toggle('hidden', !isHost || !connected);
-    $('result-modal').classList.add('visible');
     if (fromOpponentAction) setConnState('');
+    const delay = immediate ? 0 : (game && game.isCheckmate() ? 750 : 300);
+    if (delay === 0) {
+      $('result-modal').classList.add('visible');
+    } else {
+      resultTimer = setTimeout(function () {
+        resultTimer = null;
+        $('result-modal').classList.add('visible');
+      }, delay);
+    }
   }
 
   function saveGame(result, sub) {
@@ -335,6 +350,7 @@
 
   // ── Host / Join ────────────────────────────────────────────────────────────
   function hostRoom() {
+    clearResultTimer();
     cleanupConn();
     roomCode = makeCode();
     isHost = true;
@@ -442,7 +458,7 @@
   $('btn-resign').addEventListener('click', function () {
     if (gameOver || !game) return;
     send({ t: 'resign' });
-    finishGame('You lost', 'you resigned', false);
+    finishGame('You lost', 'you resigned', false, true);
   });
   $('btn-flip').addEventListener('click', function () { ui && ui.flip(); });
   $('btn-rematch').addEventListener('click', function () {
