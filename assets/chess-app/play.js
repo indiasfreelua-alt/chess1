@@ -556,18 +556,8 @@
   });
   $('btn-resign').addEventListener('click', function () {
     if (gameOver) return;
-    gameOver = true;
-    setThinking(false);
-    stopClock();
     destroyEngine();
-    if (global.SoundFx) global.SoundFx.play('lose');
-    const id = saveGame('You lost', 'by resignation');
-    resultText.textContent = 'You lost';
-    resultSub.textContent = 'by resignation';
-    $('btn-analyze').onclick = function () {
-      window.location.href = '../analysis/?game=' + id;
-    };
-    resultModal.classList.add('visible');
+    finishGame('You lost', 'by resignation');
   });
   $('btn-flip').addEventListener('click', function () { ui && ui.flip(); });
   $('btn-rematch').addEventListener('click', function () {

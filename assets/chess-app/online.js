@@ -307,7 +307,7 @@
     $('result-text').textContent = result;
     $('result-sub').textContent = sub;
     $('btn-analyze').onclick = function () {
-      window.location.href = '/analysis?game=' + id;
+      window.location.href = '../../analysis/?game=' + id;
     };
     // Only the host may propose a rematch (single source of truth).
     $('btn-rematch').classList.toggle('hidden', !isHost || !connected);
